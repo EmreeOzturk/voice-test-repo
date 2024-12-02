@@ -143,6 +143,7 @@ fastify.all("/incoming-call", async (request, reply) => {
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
                           <Response>
                               <Connect>
+                                  <Say>Merhaba, Nasıl yardımcı olabilirim ?</Say>
                                   <Stream url="wss://${request.headers.host}/media-stream" />
                               </Connect>
                           </Response>`;
@@ -197,31 +198,11 @@ fastify.register(async (fastify) => {
             openAiWs.send(JSON.stringify(sessionUpdate));
         };
 
-        // Send initial greeting message
-        const sendInitialGreeting = () => {
-            const greetingMessage = {
-                type: "response",
-                response: {
-                    role: "assistant",
-                    content:
-                        "Merhaba, hoş geldiniz! Size nasıl yardımcı olabilirim?",
-                    end_turn: true,
-                },
-            };
-            console.log(
-                "Sending initial greeting:",
-                JSON.stringify(greetingMessage),
-            );
-            openAiWs.send(JSON.stringify(greetingMessage));
-        };
-
         // Open event for OpenAI WebSocket
         openAiWs.on("open", () => {
             console.log("Connected to the OpenAI Realtime API");
             setTimeout(() => {
                 sendSessionUpdate();
-                // Send initial greeting after a short delay to ensure session is updated
-                setTimeout(sendInitialGreeting, 500);
             }, 250);
         });
 
