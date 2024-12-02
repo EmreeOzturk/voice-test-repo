@@ -111,7 +111,7 @@ SORUN ÇÖZME:
 
 Yanıtlarınız, müşteriye sorgulama süreci boyunca rehberlik ederken ve Clinic Emre'nin hizmetlerine olan güveni artırırken yapılandırılmış, bilgilendirici ve odaklı olmalıdır. İletişim tarzınızı, profesyonel standartları korurken müşterinin anlama düzeyine ve kültürel geçmişine uygun şekilde uyarlayın.`;
 const VOICE = "ash";
-const PORT = process.env.PORT || 5050;
+const PORT = process.env.PORT || 8080;
 const WEBHOOK_URL =
     "https://hook.eu2.make.com/xe1mco7s4tyn2xnvq1gs67cqikkt864v";
 
