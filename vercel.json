@@ -9,7 +9,11 @@
     "routes": [
         {
             "src": "/media-stream",
-            "dest": "index.js"
+            "dest": "index.js",
+            "headers": {
+                "Upgrade": "websocket",
+                "Connection": "upgrade"
+            }
         },
         {
             "src": "/incoming-call",

@@ -17,8 +17,14 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
+// Near the top of your file, after imports
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Initialize Fastify
-const fastify = Fastify();
+const fastify = Fastify({
+    trustProxy: isProduction,
+    logger: true
+});
 fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
 
@@ -309,13 +315,26 @@ fastify.register(async (fastify) => {
   });
 });
 
-fastify.listen({ port: PORT }, (err) => {
-  if (err) {
-    console.error(err);
-    process.exit(1);
-  }
-  console.log(`Server is listening on port ${PORT}`);
-});
+// Create the serverless handler
+const serverlessHandler = async (req, res) => {
+    await fastify.ready();
+    fastify.server.emit('request', req, res);
+};
+
+// Start the server based on environment
+if (!isProduction) {
+    // Local development
+    fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
+        if (err) {
+            console.error(err);
+            process.exit(1);
+        }
+        console.log(`Server is listening on port ${PORT}`);
+    });
+}
+
+// Export the handler for serverless environments
+export default serverlessHandler;
 
 // Function to make ChatGPT API completion call with structured outputs
 async function makeChatGPTCompletion(transcript) {
