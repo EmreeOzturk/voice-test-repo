@@ -111,7 +111,7 @@ SORUN ÇÖZME:
 
 Yanıtlarınız, müşteriye sorgulama süreci boyunca rehberlik ederken ve Clinic Emre'nin hizmetlerine olan güveni artırırken yapılandırılmış, bilgilendirici ve odaklı olmalıdır. İletişim tarzınızı, profesyonel standartları korurken müşterinin anlama düzeyine ve kültürel geçmişine uygun şekilde uyarlayın.`;
 const VOICE = "ash";
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 5050;
 const WEBHOOK_URL =
     "https://hook.eu2.make.com/xe1mco7s4tyn2xnvq1gs67cqikkt864v";
 
@@ -141,12 +141,12 @@ fastify.all("/incoming-call", async (request, reply) => {
     console.log("Incoming call");
 
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
-                          <Response>
-                              <Connect>
-                                  <Say>Merhaba, Nasıl yardımcı olabilirim ?</Say>
-                                  <Stream url="wss://${request.headers.host}/media-stream" />
-                              </Connect>
-                          </Response>`;
+      <Response>
+          <Say>Merhaba, Nasıl yardımcı olabilirim ?</Say>
+          <Connect>
+              <Stream url="wss://${request.headers.host}/media-stream" />
+          </Connect>
+      </Response>`;
 
     reply.type("text/xml").send(twimlResponse);
 });
