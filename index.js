@@ -18,15 +18,7 @@ if (!OPENAI_API_KEY) {
 }
 
 // Initialize Fastify
-const fastify = Fastify({
-    logger: {
-        level: 'info',
-        transport: {
-            target: 'pino-pretty'
-        }
-    },
-    trustProxy: true
-});
+const fastify = Fastify();
 fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
 
@@ -119,8 +111,8 @@ SORUN ÇÖZME:
 
 Yanıtlarınız, müşteriye sorgulama süreci boyunca rehberlik ederken ve Clinic Emre'nin hizmetlerine olan güveni artırırken yapılandırılmış, bilgilendirici ve odaklı olmalıdır. İletişim tarzınızı, profesyonel standartları korurken müşterinin anlama düzeyine ve kültürel geçmişine uygun şekilde uyarlayın.`;
 const VOICE = "ash";
-const PORT = process.env.PORT || 5050;
-const HOST = '0.0.0.0';  // Required for Railway
+const PORT = process.env.PORT || 8080;
+const HOST = "0.0.0.0";
 const WEBHOOK_URL =
     "https://hook.eu2.make.com/xe1mco7s4tyn2xnvq1gs67cqikkt864v";
 
@@ -139,15 +131,6 @@ const LOG_EVENT_TYPES = [
     "response.text.done",
     "conversation.item.input_audio_transcription.completed",
 ];
-
-// Add this near the top of your file
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
 
 // Root Route
 fastify.get("/", async (request, reply) => {
@@ -534,8 +517,3 @@ async function processTranscriptAndSend(transcript, sessionId = null) {
         console.error("Error in processTranscriptAndSend:", error);
     }
 }
-
-// Add this near your other routes
-fastify.get('/health', async (request, reply) => {
-    reply.send({ status: 'ok' });
-});
