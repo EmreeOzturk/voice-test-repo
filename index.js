@@ -138,10 +138,11 @@ const LOG_EVENT_TYPES = [
 ];
 
 // Add these constants at the top of the file, after other constants
-const SPEECH_THRESHOLD = 0.15;        // Adjust this value based on testing
-const MIN_SPEECH_SAMPLES = 10;        // Minimum number of samples above threshold
-const SPEECH_DEBOUNCE_TIME = 300;     // Time in ms to wait before confirming speech
-const RMS_WINDOW_SIZE = 512;          // Size of the window for RMS calculation
+const SPEECH_THRESHOLD = 0.25;        // Increased threshold for speech detection
+const MIN_SPEECH_SAMPLES = 480;       // Minimum samples needed (30ms at 16kHz)
+const CONSECUTIVE_WINDOWS = 3;        // Number of consecutive windows needed
+const MIN_VOLUME = 0.15;             // Minimum volume threshold
+const RMS_WINDOW_SIZE = 160;         // Window size for RMS calculation
 
 // Root route - just for checking if the server is running
 fastify.get("/", async (request, reply) => {
@@ -336,59 +337,68 @@ fastify.register(async (fastify) => {
       sendFirstMessage(); // Send the first message if queued
     });
 
-    // Update the isLikelySpeech function for more accurate detection
+    // Update the isLikelySpeech function for more robust detection
     function isLikelySpeech(audioPayload) {
-      if (!audioPayload || audioPayload.length === 0) {
-        console.warn('Empty or invalid audio payload received');
+      if (!audioPayload || audioPayload.length < MIN_SPEECH_SAMPLES) {
         return false;
       }
 
       try {
-        // Convert the audio payload to Uint8Array if it's not already
         const audioData = Buffer.isBuffer(audioPayload) ? 
           new Uint8Array(audioPayload) : 
           new Uint8Array(Buffer.from(audioPayload, 'base64'));
 
-        // Create a sliding window for RMS calculation
         const windowSize = Math.min(RMS_WINDOW_SIZE, audioData.length);
         const windows = Math.floor(audioData.length / windowSize);
+        let consecutiveWindows = 0;
         let maxRMS = 0;
-        let significantWindows = 0;
+        let averageVolume = 0;
 
         // Analyze each window of audio
         for (let w = 0; w < windows; w++) {
           const start = w * windowSize;
           const end = start + windowSize;
           let windowSum = 0;
+          let volumeSum = 0;
 
-          // Calculate RMS for this window using a simple loop
+          // Calculate RMS and volume for this window
           for (let i = start; i < end; i++) {
-            // Convert 8-bit unsigned (0-255) to signed (-128 to 127)
             const sample = (audioData[i] - 128) / 128.0;
             windowSum += sample * sample;
+            volumeSum += Math.abs(sample);
           }
 
           const rms = Math.sqrt(windowSum / windowSize);
-          maxRMS = Math.max(maxRMS, rms);
+          const volume = volumeSum / windowSize;
           
-          if (rms > SPEECH_THRESHOLD) {
-            significantWindows++;
+          maxRMS = Math.max(maxRMS, rms);
+          averageVolume += volume;
+
+          // Check if this window contains speech
+          if (rms > SPEECH_THRESHOLD && volume > MIN_VOLUME) {
+            consecutiveWindows++;
+          } else {
+            consecutiveWindows = 0; // Reset if we detect a non-speech window
           }
         }
 
-        // Log detailed analytics for debugging
+        averageVolume /= windows;
+
+        // Log analytics with more detail
         console.log(`Audio analysis:
           Max RMS: ${maxRMS.toFixed(3)}
-          Significant windows: ${significantWindows}/${windows}
-          Total samples: ${audioData.length}
-          Window size: ${windowSize}
+          Average Volume: ${averageVolume.toFixed(3)}
+          Consecutive Windows: ${consecutiveWindows}
+          Total Windows: ${windows}
+          Sample Length: ${audioData.length}
         `);
 
-        // Enhanced decision logic
-        const isSignificant = (significantWindows / windows) > 0.3; // At least 30% of windows should be significant
-        const hasEnoughVolume = maxRMS > SPEECH_THRESHOLD;
+        // More stringent requirements for speech detection
+        const hasEnoughConsecutiveWindows = consecutiveWindows >= CONSECUTIVE_WINDOWS;
+        const hasEnoughVolume = averageVolume > MIN_VOLUME;
+        const hasSignificantRMS = maxRMS > SPEECH_THRESHOLD;
 
-        if (isSignificant && hasEnoughVolume) {
+        if (hasEnoughConsecutiveWindows && hasEnoughVolume && hasSignificantRMS) {
           console.log('Speech detected with high confidence');
           return true;
         }
