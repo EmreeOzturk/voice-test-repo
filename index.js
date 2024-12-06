@@ -138,9 +138,9 @@ const LOG_EVENT_TYPES = [
 ];
 
 // Add these constants at the top of the file, after other constants
-const SPEECH_THRESHOLD = 0.15;        // Threshold for detecting speech (adjust based on testing)
-const MIN_SPEECH_SAMPLES = 10;        // Minimum number of samples above threshold to consider as speech
-const SPEECH_DEBOUNCE_TIME = 300;     // Time in ms to wait before confirming speech detection
+const SPEECH_THRESHOLD = 0.15;        // Adjust this value based on testing
+const MIN_SPEECH_SAMPLES = 10;        // Minimum number of samples above threshold
+const SPEECH_DEBOUNCE_TIME = 300;     // Time in ms to wait before confirming speech
 const RMS_WINDOW_SIZE = 512;          // Size of the window for RMS calculation
 
 // Root route - just for checking if the server is running
@@ -344,9 +344,14 @@ fastify.register(async (fastify) => {
       }
 
       try {
+        // Convert the audio payload to Uint8Array if it's not already
+        const audioData = Buffer.isBuffer(audioPayload) ? 
+          new Uint8Array(audioPayload) : 
+          new Uint8Array(Buffer.from(audioPayload, 'base64'));
+
         // Create a sliding window for RMS calculation
-        const windowSize = Math.min(RMS_WINDOW_SIZE, audioPayload.length);
-        const windows = Math.floor(audioPayload.length / windowSize);
+        const windowSize = Math.min(RMS_WINDOW_SIZE, audioData.length);
+        const windows = Math.floor(audioData.length / windowSize);
         let maxRMS = 0;
         let significantWindows = 0;
 
@@ -354,14 +359,18 @@ fastify.register(async (fastify) => {
         for (let w = 0; w < windows; w++) {
           const start = w * windowSize;
           const end = start + windowSize;
-          const windowData = audioPayload.slice(start, end);
-          
-          // Calculate RMS for this window
-          const rms = Math.sqrt(
-            windowData.reduce((sum, sample) => sum + (Math.abs(sample / 128) ** 2), 0) / windowSize
-          );
-          
+          let windowSum = 0;
+
+          // Calculate RMS for this window using a simple loop
+          for (let i = start; i < end; i++) {
+            // Convert 8-bit unsigned (0-255) to signed (-128 to 127)
+            const sample = (audioData[i] - 128) / 128.0;
+            windowSum += sample * sample;
+          }
+
+          const rms = Math.sqrt(windowSum / windowSize);
           maxRMS = Math.max(maxRMS, rms);
+          
           if (rms > SPEECH_THRESHOLD) {
             significantWindows++;
           }
@@ -371,7 +380,7 @@ fastify.register(async (fastify) => {
         console.log(`Audio analysis:
           Max RMS: ${maxRMS.toFixed(3)}
           Significant windows: ${significantWindows}/${windows}
-          Total samples: ${audioPayload.length}
+          Total samples: ${audioData.length}
           Window size: ${windowSize}
         `);
 
@@ -399,30 +408,42 @@ fastify.register(async (fastify) => {
       }
 
       try {
-        const windowSize = Math.min(RMS_WINDOW_SIZE, audioPayload.length);
+        // Convert the audio payload to Uint8Array if it's not already
+        const audioData = Buffer.isBuffer(audioPayload) ? 
+          new Uint8Array(audioPayload) : 
+          new Uint8Array(Buffer.from(audioPayload, 'base64'));
+
+        const windowSize = Math.min(RMS_WINDOW_SIZE, audioData.length);
         let sum = 0;
         let max = 0;
         let rmsSum = 0;
 
         // Process audio in windows for more stable measurements
-        for (let i = 0; i < audioPayload.length; i += windowSize) {
-          const windowEnd = Math.min(i + windowSize, audioPayload.length);
-          const windowData = audioPayload.slice(i, windowEnd);
-          
-          // Calculate window statistics
-          const windowRMS = Math.sqrt(
-            windowData.reduce((sum, sample) => sum + (Math.abs(sample / 128) ** 2), 0) / windowData.length
-          );
-          
-          const windowMax = Math.max(...windowData.map(s => Math.abs(s / 128)));
-          const windowAvg = windowData.reduce((sum, sample) => sum + Math.abs(sample / 128), 0) / windowData.length;
+        for (let i = 0; i < audioData.length; i += windowSize) {
+          const windowEnd = Math.min(i + windowSize, audioData.length);
+          let windowRmsSum = 0;
+          let windowSum = 0;
+          let windowMax = 0;
+
+          // Calculate window statistics using a simple loop
+          for (let j = i; j < windowEnd; j++) {
+            // Convert 8-bit unsigned (0-255) to signed (-128 to 127)
+            const sample = (audioData[j] - 128) / 128.0;
+            windowRmsSum += sample * sample;
+            windowSum += Math.abs(sample);
+            windowMax = Math.max(windowMax, Math.abs(sample));
+          }
+
+          const windowSize = windowEnd - i;
+          const windowRMS = Math.sqrt(windowRmsSum / windowSize);
+          const windowAvg = windowSum / windowSize;
 
           rmsSum += windowRMS;
           sum += windowAvg;
           max = Math.max(max, windowMax);
         }
 
-        const windows = Math.ceil(audioPayload.length / windowSize);
+        const windows = Math.ceil(audioData.length / windowSize);
         const averageRMS = rmsSum / windows;
         const averageLevel = sum / windows;
 
