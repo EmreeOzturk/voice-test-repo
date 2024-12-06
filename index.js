@@ -137,12 +137,13 @@ const LOG_EVENT_TYPES = [
   "conversation.item.input_audio_transcription.completed",
 ];
 
-// Adjust these constants to be more sensitive
-const SPEECH_THRESHOLD = 0.08;        // Much lower threshold for easier detection
-const MIN_SPEECH_SAMPLES = 160;       // Reduced to 10ms at 16kHz
-const CONSECUTIVE_WINDOWS = 1;        // Only require one window
-const MIN_VOLUME = 0.05;             // Much lower minimum volume threshold
+// Adjust these constants for better balance
+const SPEECH_THRESHOLD = 0.12;        // Moderate threshold for speech detection
+const MIN_SPEECH_SAMPLES = 240;       // 15ms at 16kHz - balanced detection time
+const CONSECUTIVE_WINDOWS = 2;        // Need 2 windows of speech for confirmation
+const MIN_VOLUME = 0.08;             // Moderate volume threshold
 const RMS_WINDOW_SIZE = 160;         // Keep window size the same
+const INTERRUPT_DELAY = 150;         // Small delay before interrupting (ms)
 
 // Root route - just for checking if the server is running
 fastify.get("/", async (request, reply) => {
@@ -337,7 +338,7 @@ fastify.register(async (fastify) => {
       sendFirstMessage(); // Send the first message if queued
     });
 
-    // Update the isLikelySpeech function to be more sensitive
+    // Update the isLikelySpeech function for better balance
     function isLikelySpeech(audioPayload) {
       if (!audioPayload || audioPayload.length < MIN_SPEECH_SAMPLES) {
         return false;
@@ -350,6 +351,7 @@ fastify.register(async (fastify) => {
 
         const windowSize = Math.min(RMS_WINDOW_SIZE, audioData.length);
         const windows = Math.floor(audioData.length / windowSize);
+        let consecutiveSpeechWindows = 0;
         let maxRMS = 0;
         let maxVolume = 0;
 
@@ -372,23 +374,28 @@ fastify.register(async (fastify) => {
           
           maxRMS = Math.max(maxRMS, rms);
           maxVolume = Math.max(maxVolume, volume);
+
+          // Count consecutive windows with speech
+          if (rms > SPEECH_THRESHOLD && volume > MIN_VOLUME) {
+            consecutiveSpeechWindows++;
+          } else {
+            consecutiveSpeechWindows = 0;
+          }
         }
 
         // Log analytics with more detail
         console.log(`Audio analysis:
           Max RMS: ${maxRMS.toFixed(3)}
           Max Volume: ${maxVolume.toFixed(3)}
-          Windows: ${windows}
+          Consecutive Speech Windows: ${consecutiveSpeechWindows}
+          Total Windows: ${windows}
           Sample Length: ${audioData.length}
         `);
 
-        // Simplified detection logic - trigger if either RMS or volume is high enough
-        if (maxRMS > SPEECH_THRESHOLD || maxVolume > MIN_VOLUME) {
-          console.log('Speech detected');
-          return true;
-        }
-
-        return false;
+        // Need consistent speech detection across multiple windows
+        return consecutiveSpeechWindows >= CONSECUTIVE_WINDOWS && 
+               maxRMS > SPEECH_THRESHOLD && 
+               maxVolume > MIN_VOLUME;
       } catch (error) {
         console.error('Error in speech detection:', error);
         return false;
@@ -510,10 +517,22 @@ fastify.register(async (fastify) => {
             };
             openAiWs.send(JSON.stringify(audioAppend)); // Send the audio data to OpenAI
 
-            // Simplified interrupt check
+            // Check for speech with debounce
             if (agentIsSpeaking && isLikelySpeech(data.media.payload)) {
-              console.log("User is speaking, interrupting agent response.");
-              interruptAgentResponse();
+              if (!speechDetected) {
+                speechDetected = true;
+                clearTimeout(speechDetectionTimeout);
+                
+                // Add small delay before interrupting
+                speechDetectionTimeout = setTimeout(() => {
+                  // Double-check if still speaking
+                  if (agentIsSpeaking) {
+                    console.log("User is speaking, interrupting agent response.");
+                    interruptAgentResponse();
+                  }
+                  speechDetected = false;
+                }, INTERRUPT_DELAY);
+              }
             }
           }
         }
