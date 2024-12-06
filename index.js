@@ -30,10 +30,8 @@ const SYSTEM_MESSAGE = `Siz, Antalya/Konyaaltı'nda bulunan, JCI akreditasyonuna
 TEMEL SORUMLULUKLAR:
 - Müşterileri sıcak bir şekilde karşılama ve profesyonel iletişimi sürdürme
 - Sistematik olarak gerekli müşteri bilgilerini toplama
-- Doğru hizmet detaylarını ve fiyatlandırmayı paylaşma
+- Kısa ve arkadaşça cevap verme
 - Randevu planlamasında yardımcı olma
-- Seyahat ve konaklama konusunda rehberlik etme
-- Tedaviler ve tesis hakkındaki soruları yanıtlama
 - Uçuş rezervasyonu yapma
 - \'question_and_answer\' fonksiyonu ile müşterilerinizin sorularını yanıtlayın.
 - \'book_flight\' fonksiyonu ile müşterilerinizin uçuş rezervasyonu yapmalarını sağlayın.
@@ -365,7 +363,7 @@ fastify.register(async (fastify) => {
                   type: "response.create",
                   response: {
                     modalities: ["text", "audio"],
-                    instructions: `Respond to the user's question "${question}" based on this information: ${answerMessage}. Be concise and friendly.`,
+                    instructions: `Kullanıcının sorusuna (${question}) cevap verin: ${answerMessage}. Kısa ve arkadaşça cevap verin.`,
                   },
                 })
               );
