@@ -25,75 +25,93 @@ fastify.register(fastifyWs); // Register WebSocket support for real-time communi
 
 // System message template for the AI assistant's behavior and persona
 const SYSTEM_MESSAGE = `
-#AI Asistan Profili
-- Rol: Clinic Emre Antalya'nın Uluslararası Tıbbi Turizm Danışmanı
-- Deneyim: 5+ yıl uluslararası hasta koordinasyonu
-- Uzmanlık: Estetik cerrahi, diş tedavileri, saç ekimi ve genel tıbbi prosedürler
-- İletişim Dili: Türkçe (birincil), İngilizce (gerektiğinde)
+SİZİN ROLÜNÜZ:  
+Siz, Antalya/Konyaaltı'ndaki JCI akreditasyonuna sahip premium sağlık turizmi tesisi **Clinic Emre**’nin uzman AI resepsiyonistisiniz. Göreviniz, uluslararası ve yerel hastaların sorularını yanıtlamak, randevularını yönetmek ve olağanüstü müşteri hizmeti sunmaktır. Klinik hizmetleri, fiyatlandırma ve prosedürler hakkında kapsamlı bilgiye sahipsiniz.  
 
-#Temel Yetkinlikler
-- Tıbbi prosedür danışmanlığı
-- Uluslararası hasta koordinasyonu
-- Seyahat ve konaklama planlaması
-- Tedavi maliyeti ve finansman seçenekleri
-- Vize ve seyahat belgeleri desteği
+### TEMEL SORUMLULUKLAR  
+- Müşterileri sıcak ve profesyonel bir şekilde karşılama  
+- Gerekli müşteri bilgilerini sistematik şekilde toplama  
+- Doğru hizmet detayları ve fiyatlandırma bilgilerini paylaşma  
+- Randevu planlama desteği sağlama  
+- Seyahat ve konaklama rehberliği yapma  
+- Tedaviler ve tesis hakkında soruları yanıtlayarak rehberlik etme  
+- Uçuş rezervasyonları yapma (book_flight fonksiyonu ile)  
 
-#İletişim Protokolü
-1. Karşılama:
-   - Sıcak ve profesyonel selamlama
-   - Hastanın adını ve iletişim tercihini not etme
-   - Önceki iletişimlere referans verme (varsa)
+### KLİNİK DETAYLARI  
+- **Konum:** Konyaaltı Bulvarı, No:123, Antalya, Türkiye  
+- **Çalışma Saatleri:** Pazartesi-Cumartesi 09:00-19:00 (GMT+3)  
+- **Diller:** Türkçe, İngilizce, Rusça, Almanca, Arapça  
+- **Personel:**  
+  - 6 Diş Uzmanı, 4 Estetik Cerrah, 2 Dermatolog, 3 Pratisyen Hekim, 12 Hemşire  
+- **Sertifikalar:** JCI Akreditasyonu, ISO 9001:2015  
 
-2. İhtiyaç Analizi:
-   - Tıbbi gereksinimler için detaylı sorgulama
-   - Mevcut sağlık durumu değerlendirmesi
-   - Tedavi beklentilerinin netleştirilmesi
-   - Zaman ve bütçe kısıtlamalarını anlama
+### HİZMETLER VE FİYATLAR  
+#### Diş Hizmetleri:  
+- **İmplant:** €500-1200 / implant (2-5 gün)  
+- **Lamina:** €200-400 / diş (5-7 gün)  
+- **Tam Gülüş Tasarımı:** €3000-8000 (7-10 gün)  
 
-3. Çözüm Sunumu:
-   - Uygun tedavi seçeneklerinin açıklanması
-   - Prosedür detayları ve beklenen sonuçlar
-   - Maliyet ve ödeme seçenekleri
-   - Tedavi takvimi önerisi
+#### Estetik İşlemler:  
+- **Botoks:** €200-400 / bölge (1 gün)  
+- **Yüz Dolgusu:** €300-600 / şırınga (1 gün)  
+- **Saç Ekimi:** €2000-4000 (1-2 gün)  
 
-4. Lojistik Planlama:
-   - Seyahat tarihleri koordinasyonu
-   - Konaklama seçenekleri
-   - Havaalanı transferleri
-   - Şehir içi ulaşım desteği
+### PAKET HİZMETLER  
+- Ücretsiz ilk online konsültasyon  
+- Havalimanı/otel transferleri  
+- Tercümanlık hizmetleri  
+- 7/24 acil destek  
+- Tedavi sonrası bakım  
 
-#Önemli Kurallar
-- Her zaman hasta mahremiyetini koru
-- Tıbbi bilgileri anlaşılır dilde aktar
-- Gerçekçi beklentiler oluştur
-- Şeffaf fiyatlandırma politikası izle
-- Hasta güvenliğini önceliklendir
+### KONAKLAMA SEÇENEKLERİ  
+- **5 yıldızlı oteller:** €80-150 / gece  
+- **4 yıldızlı oteller:** €50-80 / gece  
+- **Apart oteller:** €40-70 / gece  
 
-#Klinik Bilgileri
-- Lokasyon: Antalya, Türkiye
-- Akreditasyonlar: JCI, ISO
-- Uzman kadro: 20+ uzman hekim
-- Dil destekleri: Türkçe, İngilizce, Rusça, Arapça
-- 7/24 hasta desteği
+### ETKİLEŞİM PROTOKOLÜ  
+1. **Bilgi Toplama:**  
+   - Tam ad  
+   - İstenen tedavi  
+   - Tarih  
 
-#Acil Durumlar
-- Acil tıbbi durumlarda hızlı müdahale protokolü
-- 24 saat erişilebilir acil hat
-- Anlaşmalı hastaneler ağı
-- Ambulans ve transfer hizmetleri
+2. **Bilgi Sağlama:**  
+   - Tedavi detayları  
+   - Süre ve fiyat  
+   - Paket dahilindeki hizmetler  
+   - Ödeme koşulları (%20 depozito, EUR/USD/GBP/TRY)  
 
-#Takip Protokolü
-- Tedavi öncesi hazırlık rehberliği
-- Tedavi sürecinde günlük durum takibi
-- Taburculuk sonrası bakım talimatları
-- Uzun vadeli iyileşme takibi
-- Kontrol randevuları koordinasyonu
+3. **Önemli Hatırlatmalar:**  
+   - Randevudan 7+ gün önce ücretsiz iptal  
+   - Medikal vize desteği  
+   - Tedavi sonrası takip bakımı  
+   - Sigorta kapsamı bilgisi  
 
-#Kalite Güvencesi
-- Hasta memnuniyeti odaklı hizmet
-- Sürekli geri bildirim mekanizması
-- Komplikasyon yönetimi protokolleri
-- Uluslararası standartlara uygunluk
+### İLETİŞİM TARZI  
+- **Ton:** Sıcak, profesyonel ve kültürel hassasiyetli  
+- **Dil:** Açık ve basit  
+- **Detay Yönetimi:**  
+  - Kullanıcı istemedikçe gereksiz detaylardan kaçının.  
+  - Konuşmayı gereksiz yere uzatmayın.  
+
+### KISITLAMALAR  
+- Tıbbi tavsiye vermeyin  
+- Tedavi sonuçları hakkında garanti sunmayın  
+- Personel kişisel bilgilerini paylaşmayın  
+- Mevcut olmayan hizmetlerden bahsetmeyin  
+- Fiyat pazarlığı yapmayın  
+- Gizli klinik bilgilerini paylaşmayın  
+
+### SORUN ÇÖZME  
+- Endişeleri profesyonelce ele alın  
+- Tıbbi soruları uzmanlara yönlendirin  
+- Alternatif çözümler sunun  
+- Sakin ve yardımsever kalın  
+
+### DAVRANIŞ İLKELERİ  
+- **Üzgün Olduğunuzu Sıkça Belirtmeyin:** Gereksiz özürlerden kaçının; bunun yerine çözüme odaklanın.  
+- **Doğrudan ve Net Olun:** Kullanıcıların zamanını gereksiz yere harcamayın; odaklı ve kısa yanıtlar verin.  
+
+Bu rehber, kullanıcıya en hızlı ve en doğru hizmeti sunmanıza yardımcı olacaktır.  
 `;
 
 // Some default constants used throughout the application
@@ -118,6 +136,12 @@ const LOG_EVENT_TYPES = [
   "response.text.done",
   "conversation.item.input_audio_transcription.completed",
 ];
+
+// Add these constants at the top of the file, after other constants
+const SPEECH_THRESHOLD = 0.15;        // Threshold for detecting speech (adjust based on testing)
+const MIN_SPEECH_SAMPLES = 10;        // Minimum number of samples above threshold to consider as speech
+const SPEECH_DEBOUNCE_TIME = 300;     // Time in ms to wait before confirming speech detection
+const RMS_WINDOW_SIZE = 512;          // Size of the window for RMS calculation
 
 // Root route - just for checking if the server is running
 fastify.get("/", async (request, reply) => {
@@ -214,6 +238,8 @@ fastify.register(async (fastify) => {
     let queuedFirstMessage = null; // Queue the first message until OpenAI WebSocket is ready
     let threadId = ""; // Initialize threadId for tracking conversation threads
     let agentIsSpeaking = false; // Flag to check if the agent is speaking
+    let speechDetected = false; // Flag to track if speech is detected
+    let speechDetectionTimeout; // Timeout for debounce logic
 
     // Use Twilio's CallSid as the session ID or create a new one based on the timestamp
     const sessionId =
@@ -310,6 +336,118 @@ fastify.register(async (fastify) => {
       sendFirstMessage(); // Send the first message if queued
     });
 
+    // Update the isLikelySpeech function for more accurate detection
+    function isLikelySpeech(audioPayload) {
+      if (!audioPayload || audioPayload.length === 0) {
+        console.warn('Empty or invalid audio payload received');
+        return false;
+      }
+
+      try {
+        // Create a sliding window for RMS calculation
+        const windowSize = Math.min(RMS_WINDOW_SIZE, audioPayload.length);
+        const windows = Math.floor(audioPayload.length / windowSize);
+        let maxRMS = 0;
+        let significantWindows = 0;
+
+        // Analyze each window of audio
+        for (let w = 0; w < windows; w++) {
+          const start = w * windowSize;
+          const end = start + windowSize;
+          const windowData = audioPayload.slice(start, end);
+          
+          // Calculate RMS for this window
+          const rms = Math.sqrt(
+            windowData.reduce((sum, sample) => sum + (Math.abs(sample / 128) ** 2), 0) / windowSize
+          );
+          
+          maxRMS = Math.max(maxRMS, rms);
+          if (rms > SPEECH_THRESHOLD) {
+            significantWindows++;
+          }
+        }
+
+        // Log detailed analytics for debugging
+        console.log(`Audio analysis:
+          Max RMS: ${maxRMS.toFixed(3)}
+          Significant windows: ${significantWindows}/${windows}
+          Total samples: ${audioPayload.length}
+          Window size: ${windowSize}
+        `);
+
+        // Enhanced decision logic
+        const isSignificant = (significantWindows / windows) > 0.3; // At least 30% of windows should be significant
+        const hasEnoughVolume = maxRMS > SPEECH_THRESHOLD;
+
+        if (isSignificant && hasEnoughVolume) {
+          console.log('Speech detected with high confidence');
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        console.error('Error in speech detection:', error);
+        return false;
+      }
+    }
+
+    // Update the calculateAudioLevel function for more accurate level detection
+    function calculateAudioLevel(audioPayload) {
+      if (!audioPayload || audioPayload.length === 0) {
+        console.warn('Empty or invalid audio payload received');
+        return 0;
+      }
+
+      try {
+        const windowSize = Math.min(RMS_WINDOW_SIZE, audioPayload.length);
+        let sum = 0;
+        let max = 0;
+        let rmsSum = 0;
+
+        // Process audio in windows for more stable measurements
+        for (let i = 0; i < audioPayload.length; i += windowSize) {
+          const windowEnd = Math.min(i + windowSize, audioPayload.length);
+          const windowData = audioPayload.slice(i, windowEnd);
+          
+          // Calculate window statistics
+          const windowRMS = Math.sqrt(
+            windowData.reduce((sum, sample) => sum + (Math.abs(sample / 128) ** 2), 0) / windowData.length
+          );
+          
+          const windowMax = Math.max(...windowData.map(s => Math.abs(s / 128)));
+          const windowAvg = windowData.reduce((sum, sample) => sum + Math.abs(sample / 128), 0) / windowData.length;
+
+          rmsSum += windowRMS;
+          sum += windowAvg;
+          max = Math.max(max, windowMax);
+        }
+
+        const windows = Math.ceil(audioPayload.length / windowSize);
+        const averageRMS = rmsSum / windows;
+        const averageLevel = sum / windows;
+
+        // Weighted combination of different metrics
+        const normalizedLevel = (
+          (averageRMS * 0.6) +    // RMS has highest weight
+          (averageLevel * 0.3) +  // Average level
+          (max * 0.1)             // Peak level
+        );
+
+        // Log detailed analytics
+        console.log(`Audio level analysis:
+          Average RMS: ${averageRMS.toFixed(3)}
+          Average Level: ${averageLevel.toFixed(3)}
+          Peak Level: ${max.toFixed(3)}
+          Final Level: ${normalizedLevel.toFixed(3)}
+        `);
+
+        return normalizedLevel;
+      } catch (error) {
+        console.error('Error calculating audio level:', error);
+        return 0;
+      }
+    }
+
     // Handle messages from Twilio (media stream) and send them to OpenAI
     connection.on("message", (message) => {
       try {
@@ -357,10 +495,16 @@ fastify.register(async (fastify) => {
             openAiWs.send(JSON.stringify(audioAppend)); // Send the audio data to OpenAI
 
             // Check if user is speaking during agent's response
-            if (agentIsSpeaking) {
-              console.log("User is speaking, interrupting agent response.");
-              // Logic to interrupt the agent's response
-              interruptAgentResponse();
+            if (agentIsSpeaking && isLikelySpeech(data.media.payload)) {
+              if (!speechDetected) {
+                speechDetected = true;
+                clearTimeout(speechDetectionTimeout);
+                speechDetectionTimeout = setTimeout(() => {
+                  console.log("User is speaking, interrupting agent response.");
+                  interruptAgentResponse();
+                  speechDetected = false;
+                }, 300); // Debounce duration in milliseconds
+              }
             }
           }
         }
