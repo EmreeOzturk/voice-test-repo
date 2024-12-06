@@ -137,12 +137,12 @@ const LOG_EVENT_TYPES = [
   "conversation.item.input_audio_transcription.completed",
 ];
 
-// Add these constants at the top of the file, after other constants
-const SPEECH_THRESHOLD = 0.25;        // Increased threshold for speech detection
-const MIN_SPEECH_SAMPLES = 480;       // Minimum samples needed (30ms at 16kHz)
-const CONSECUTIVE_WINDOWS = 3;        // Number of consecutive windows needed
-const MIN_VOLUME = 0.15;             // Minimum volume threshold
-const RMS_WINDOW_SIZE = 160;         // Window size for RMS calculation
+// Adjust these constants at the top of the file
+const SPEECH_THRESHOLD = 0.15;        // Decreased threshold for easier detection
+const MIN_SPEECH_SAMPLES = 320;       // Reduced minimum samples (20ms at 16kHz)
+const CONSECUTIVE_WINDOWS = 2;        // Reduced number of consecutive windows needed
+const MIN_VOLUME = 0.10;             // Lowered minimum volume threshold
+const RMS_WINDOW_SIZE = 160;         // Keep window size the same
 
 // Root route - just for checking if the server is running
 fastify.get("/", async (request, reply) => {
@@ -337,7 +337,7 @@ fastify.register(async (fastify) => {
       sendFirstMessage(); // Send the first message if queued
     });
 
-    // Update the isLikelySpeech function for more robust detection
+    // Update the isLikelySpeech function to be more responsive
     function isLikelySpeech(audioPayload) {
       if (!audioPayload || audioPayload.length < MIN_SPEECH_SAMPLES) {
         return false;
@@ -374,11 +374,14 @@ fastify.register(async (fastify) => {
           maxRMS = Math.max(maxRMS, rms);
           averageVolume += volume;
 
-          // Check if this window contains speech
-          if (rms > SPEECH_THRESHOLD && volume > MIN_VOLUME) {
+          // More lenient speech detection
+          if (rms > SPEECH_THRESHOLD || volume > MIN_VOLUME) {
             consecutiveWindows++;
           } else {
-            consecutiveWindows = 0; // Reset if we detect a non-speech window
+            // Only reset if significantly below threshold
+            if (rms < SPEECH_THRESHOLD * 0.5 && volume < MIN_VOLUME * 0.5) {
+              consecutiveWindows = 0;
+            }
           }
         }
 
@@ -393,13 +396,13 @@ fastify.register(async (fastify) => {
           Sample Length: ${audioData.length}
         `);
 
-        // More stringent requirements for speech detection
+        // More lenient requirements for speech detection
         const hasEnoughConsecutiveWindows = consecutiveWindows >= CONSECUTIVE_WINDOWS;
-        const hasEnoughVolume = averageVolume > MIN_VOLUME;
-        const hasSignificantRMS = maxRMS > SPEECH_THRESHOLD;
+        const hasMinimumVolume = averageVolume > MIN_VOLUME * 0.8; // 80% of minimum volume is acceptable
+        const hasDetectableRMS = maxRMS > SPEECH_THRESHOLD * 0.8; // 80% of threshold is acceptable
 
-        if (hasEnoughConsecutiveWindows && hasEnoughVolume && hasSignificantRMS) {
-          console.log('Speech detected with high confidence');
+        if (hasEnoughConsecutiveWindows && (hasMinimumVolume || hasDetectableRMS)) {
+          console.log('Speech detected with confidence');
           return true;
         }
 
