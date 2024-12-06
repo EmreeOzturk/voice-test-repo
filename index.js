@@ -137,13 +137,12 @@ const LOG_EVENT_TYPES = [
   "conversation.item.input_audio_transcription.completed",
 ];
 
-// Adjust these constants for better balance
-const SPEECH_THRESHOLD = 0.12;        // Moderate threshold for speech detection
-const MIN_SPEECH_SAMPLES = 240;       // 15ms at 16kHz - balanced detection time
-const CONSECUTIVE_WINDOWS = 2;        // Need 2 windows of speech for confirmation
-const MIN_VOLUME = 0.08;             // Moderate volume threshold
+// Adjust these constants at the top of the file
+const SPEECH_THRESHOLD = 0.15;        // Decreased threshold for easier detection
+const MIN_SPEECH_SAMPLES = 320;       // Reduced minimum samples (20ms at 16kHz)
+const CONSECUTIVE_WINDOWS = 2;        // Reduced number of consecutive windows needed
+const MIN_VOLUME = 0.10;             // Lowered minimum volume threshold
 const RMS_WINDOW_SIZE = 160;         // Keep window size the same
-const INTERRUPT_DELAY = 150;         // Small delay before interrupting (ms)
 
 // Root route - just for checking if the server is running
 fastify.get("/", async (request, reply) => {
@@ -338,7 +337,7 @@ fastify.register(async (fastify) => {
       sendFirstMessage(); // Send the first message if queued
     });
 
-    // Update the isLikelySpeech function for better balance
+    // Update the isLikelySpeech function to be more responsive
     function isLikelySpeech(audioPayload) {
       if (!audioPayload || audioPayload.length < MIN_SPEECH_SAMPLES) {
         return false;
@@ -351,9 +350,9 @@ fastify.register(async (fastify) => {
 
         const windowSize = Math.min(RMS_WINDOW_SIZE, audioData.length);
         const windows = Math.floor(audioData.length / windowSize);
-        let consecutiveSpeechWindows = 0;
+        let consecutiveWindows = 0;
         let maxRMS = 0;
-        let maxVolume = 0;
+        let averageVolume = 0;
 
         // Analyze each window of audio
         for (let w = 0; w < windows; w++) {
@@ -373,29 +372,41 @@ fastify.register(async (fastify) => {
           const volume = volumeSum / windowSize;
           
           maxRMS = Math.max(maxRMS, rms);
-          maxVolume = Math.max(maxVolume, volume);
+          averageVolume += volume;
 
-          // Count consecutive windows with speech
-          if (rms > SPEECH_THRESHOLD && volume > MIN_VOLUME) {
-            consecutiveSpeechWindows++;
+          // More lenient speech detection
+          if (rms > SPEECH_THRESHOLD || volume > MIN_VOLUME) {
+            consecutiveWindows++;
           } else {
-            consecutiveSpeechWindows = 0;
+            // Only reset if significantly below threshold
+            if (rms < SPEECH_THRESHOLD * 0.5 && volume < MIN_VOLUME * 0.5) {
+              consecutiveWindows = 0;
+            }
           }
         }
+
+        averageVolume /= windows;
 
         // Log analytics with more detail
         console.log(`Audio analysis:
           Max RMS: ${maxRMS.toFixed(3)}
-          Max Volume: ${maxVolume.toFixed(3)}
-          Consecutive Speech Windows: ${consecutiveSpeechWindows}
+          Average Volume: ${averageVolume.toFixed(3)}
+          Consecutive Windows: ${consecutiveWindows}
           Total Windows: ${windows}
           Sample Length: ${audioData.length}
         `);
 
-        // Need consistent speech detection across multiple windows
-        return consecutiveSpeechWindows >= CONSECUTIVE_WINDOWS && 
-               maxRMS > SPEECH_THRESHOLD && 
-               maxVolume > MIN_VOLUME;
+        // More lenient requirements for speech detection
+        const hasEnoughConsecutiveWindows = consecutiveWindows >= CONSECUTIVE_WINDOWS;
+        const hasMinimumVolume = averageVolume > MIN_VOLUME * 0.8; // 80% of minimum volume is acceptable
+        const hasDetectableRMS = maxRMS > SPEECH_THRESHOLD * 0.8; // 80% of threshold is acceptable
+
+        if (hasEnoughConsecutiveWindows && (hasMinimumVolume || hasDetectableRMS)) {
+          console.log('Speech detected with confidence');
+          return true;
+        }
+
+        return false;
       } catch (error) {
         console.error('Error in speech detection:', error);
         return false;
@@ -517,21 +528,16 @@ fastify.register(async (fastify) => {
             };
             openAiWs.send(JSON.stringify(audioAppend)); // Send the audio data to OpenAI
 
-            // Check for speech with debounce
+            // Check if user is speaking during agent's response
             if (agentIsSpeaking && isLikelySpeech(data.media.payload)) {
               if (!speechDetected) {
                 speechDetected = true;
                 clearTimeout(speechDetectionTimeout);
-                
-                // Add small delay before interrupting
                 speechDetectionTimeout = setTimeout(() => {
-                  // Double-check if still speaking
-                  if (agentIsSpeaking) {
-                    console.log("User is speaking, interrupting agent response.");
-                    interruptAgentResponse();
-                  }
+                  console.log("User is speaking, interrupting agent response.");
+                  interruptAgentResponse();
                   speechDetected = false;
-                }, INTERRUPT_DELAY);
+                }, 300); // Debounce duration in milliseconds
               }
             }
           }
@@ -569,11 +575,6 @@ fastify.register(async (fastify) => {
               media: { payload: response.delta }, // Send audio back to Twilio
             })
           );
-        }
-
-        // Make sure to reset agentIsSpeaking when the response is done
-        if (response.type === "response.done") {
-          agentIsSpeaking = false;
         }
 
         // Handle function calls (for Q&A and booking a medical appointment)
