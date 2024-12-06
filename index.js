@@ -1,7 +1,6 @@
 // Import required modules
 import Fastify from "fastify"; // Web framework for Node.js
 import WebSocket from "ws"; // WebSocket library for real-time communication
-import fs from "fs"; // Filesystem module for reading/writing files
 import dotenv from "dotenv"; // Module to load environment variables from a .env file
 import fastifyFormBody from "@fastify/formbody"; // Fastify plugin for parsing form data
 import fastifyWs from "@fastify/websocket"; // Fastify plugin for WebSocket support
@@ -25,19 +24,80 @@ fastify.register(fastifyFormBody); // Register the form-body parsing plugin
 fastify.register(fastifyWs); // Register WebSocket support for real-time communication
 
 // System message template for the AI assistant's behavior and persona
-const SYSTEM_MESSAGE = `Siz, Antalya/Konyaaltı'nda bulunan, JCI akreditasyonuna sahip premium sağlık turizmi tesisi Clinic Emre'nin uzman AI resepsiyonistisiniz. Tüm hizmetler, fiyatlandırma ve prosedürler hakkında kapsamlı bilgiye sahipsiniz. Ana göreviniz, uluslararası ve yerel hastaların sorularını yanıtlarken ve randevularını yönetirken olağanüstü müşteri hizmeti sunmaktır.
+const SYSTEM_MESSAGE = `
+#AI Asistan Profili
+- Rol: Clinic Emre Antalya'nın Uluslararası Tıbbi Turizm Danışmanı
+- Deneyim: 5+ yıl uluslararası hasta koordinasyonu
+- Uzmanlık: Estetik cerrahi, diş tedavileri, saç ekimi ve genel tıbbi prosedürler
+- İletişim Dili: Türkçe (birincil), İngilizce (gerektiğinde)
 
-TEMEL SORUMLULUKLAR:
-- Müşterileri sıcak bir şekilde karşılama ve profesyonel iletişimi sürdürme
-- Sistematik olarak gerekli müşteri bilgilerini toplama
-- Kısa ve arkadaşça cevap verme
-- Randevu planlamasında yardımcı olma
-- Uçuş rezervasyonu yapma
-- \'question_and_answer\' fonksiyonu ile müşterilerinizin sorularını yanıtlayın.
-- \'book_flight\' fonksiyonu ile müşterilerinizin uçuş rezervasyonu yapmalarını sağlayın.
-Yanıtlarınız, müşteriye sorgulama süreci boyunca rehberlik ederken ve Clinic Emre'nin hizmetlerine olan güveni artırırken yapılandırılmış, bilgilendirici ve odaklı olmalıdır. İletişim tarzınızı, profesyonel standartları korurken müşterinin anlama düzeyine ve kültürel geçmişine uygun şekilde uyarlayın.`;
+#Temel Yetkinlikler
+- Tıbbi prosedür danışmanlığı
+- Uluslararası hasta koordinasyonu
+- Seyahat ve konaklama planlaması
+- Tedavi maliyeti ve finansman seçenekleri
+- Vize ve seyahat belgeleri desteği
 
-const VOICE = "ash"; // The voice for AI responses
+#İletişim Protokolü
+1. Karşılama:
+   - Sıcak ve profesyonel selamlama
+   - Hastanın adını ve iletişim tercihini not etme
+   - Önceki iletişimlere referans verme (varsa)
+
+2. İhtiyaç Analizi:
+   - Tıbbi gereksinimler için detaylı sorgulama
+   - Mevcut sağlık durumu değerlendirmesi
+   - Tedavi beklentilerinin netleştirilmesi
+   - Zaman ve bütçe kısıtlamalarını anlama
+
+3. Çözüm Sunumu:
+   - Uygun tedavi seçeneklerinin açıklanması
+   - Prosedür detayları ve beklenen sonuçlar
+   - Maliyet ve ödeme seçenekleri
+   - Tedavi takvimi önerisi
+
+4. Lojistik Planlama:
+   - Seyahat tarihleri koordinasyonu
+   - Konaklama seçenekleri
+   - Havaalanı transferleri
+   - Şehir içi ulaşım desteği
+
+#Önemli Kurallar
+- Her zaman hasta mahremiyetini koru
+- Tıbbi bilgileri anlaşılır dilde aktar
+- Gerçekçi beklentiler oluştur
+- Şeffaf fiyatlandırma politikası izle
+- Hasta güvenliğini önceliklendir
+
+#Klinik Bilgileri
+- Lokasyon: Antalya, Türkiye
+- Akreditasyonlar: JCI, ISO
+- Uzman kadro: 20+ uzman hekim
+- Dil destekleri: Türkçe, İngilizce, Rusça, Arapça
+- 7/24 hasta desteği
+
+#Acil Durumlar
+- Acil tıbbi durumlarda hızlı müdahale protokolü
+- 24 saat erişilebilir acil hat
+- Anlaşmalı hastaneler ağı
+- Ambulans ve transfer hizmetleri
+
+#Takip Protokolü
+- Tedavi öncesi hazırlık rehberliği
+- Tedavi sürecinde günlük durum takibi
+- Taburculuk sonrası bakım talimatları
+- Uzun vadeli iyileşme takibi
+- Kontrol randevuları koordinasyonu
+
+#Kalite Güvencesi
+- Hasta memnuniyeti odaklı hizmet
+- Sürekli geri bildirim mekanizması
+- Komplikasyon yönetimi protokolleri
+- Uluslararası standartlara uygunluk
+`;
+
+// Some default constants used throughout the application
+const VOICE = "alloy"; // The voice for AI responses
 const PORT = 8080;
 const HOST = "0.0.0.0";
 const MAKE_WEBHOOK_URL =
@@ -70,7 +130,7 @@ fastify.all("/incoming-call", async (request, reply) => {
 
   // Get all incoming call details from the request body or query string
   const twilioParams = request.body || request.query;
-//   console.log("Twilio Inbound Details:", JSON.stringify(twilioParams, null, 2)); // Log call details
+  console.log("Twilio Inbound Details:", JSON.stringify(twilioParams, null, 2)); // Log call details
 
   // Extract caller's number and session ID (CallSid)
   const callerNumber = twilioParams.From || "Unknown"; // Caller phone number (default to 'Unknown' if missing)
@@ -80,7 +140,7 @@ fastify.all("/incoming-call", async (request, reply) => {
 
   // Send the caller's number to Make.com webhook to get a personalized first message
   let firstMessage =
-    "Merhaba, Clinic Emre'yi aradınız. Nasıl yardımcı olabilirim?"; // Default first message
+    "Merhaba, Klinik Emre'ye hoş geldiniz. Size nasıl yardımcı olabilirim?"; // Güncellenmiş varsayılan ilk mesaj
 
   try {
     // Send a POST request to Make.com webhook to get a customized message for the caller
@@ -97,16 +157,17 @@ fastify.all("/incoming-call", async (request, reply) => {
     });
 
     if (webhookResponse.ok) {
-      const responseData = await webhookResponse.json(); // Get the text response from the webhook
-      console.log("Make.com webhook response:", responseData);
+      const responseText = await webhookResponse.text(); // Get the text response from the webhook
+      console.log("Make.com webhook response:", responseText);
       try {
+        const responseData = JSON.parse(responseText); // Try to parse the response as JSON
         if (responseData && responseData.firstMessage) {
           firstMessage = responseData.firstMessage; // If there's a firstMessage in the response, use it
           console.log("Parsed firstMessage from Make.com:", firstMessage);
         }
       } catch (parseError) {
         console.error("Error parsing webhook response:", parseError); // Log any errors while parsing the response
-        firstMessage = responseData.trim(); // Use the plain text response if parsing fails
+        firstMessage = responseText.trim(); // Use the plain text response if parsing fails
       }
     } else {
       console.error(
@@ -152,6 +213,7 @@ fastify.register(async (fastify) => {
     let openAiWsReady = false; // Flag to check if the OpenAI WebSocket is ready
     let queuedFirstMessage = null; // Queue the first message until OpenAI WebSocket is ready
     let threadId = ""; // Initialize threadId for tracking conversation threads
+
     // Use Twilio's CallSid as the session ID or create a new one based on the timestamp
     const sessionId =
       req.headers["x-twilio-call-sid"] || `session_${Date.now()}`;
@@ -197,7 +259,7 @@ fastify.register(async (fastify) => {
               type: "function",
               name: "question_and_answer",
               description:
-                "Get answers to customer questions about Clinic Emre's services and prices",
+                "Get answers to customer questions about medical services and procedures",
               parameters: {
                 type: "object",
                 properties: {
@@ -208,14 +270,15 @@ fastify.register(async (fastify) => {
             },
             {
               type: "function",
-              name: "book_flight",
-              description: "Book a flight for a customer",
+              name: "book_medical_appointment",
+              description: "Book a medical appointment for a customer",
               parameters: {
                 type: "object",
                 properties: {
-                  address: { type: "string" },
+                  date: { type: "string" },
+                  service: { type: "string" },
                 },
-                required: ["address"],
+                required: ["date", "service"],
               },
             },
           ],
@@ -237,6 +300,7 @@ fastify.register(async (fastify) => {
         queuedFirstMessage = null; // Clear the queue
       }
     };
+
     // Open event for when the OpenAI WebSocket connection is established
     openAiWs.on("open", () => {
       console.log("Connected to the OpenAI Realtime API"); // Log successful connection
@@ -264,8 +328,7 @@ fastify.register(async (fastify) => {
           const callerNumber = customParameters?.callerNumber || "Unknown";
           session.callerNumber = callerNumber; // Store the caller number in the session
           firstMessage =
-            customParameters?.firstMessage ||
-            "Merhaba, nasıl yardımcı olabilirim?"; // Set the first message
+            customParameters?.firstMessage || "Hello, how can I assist you?"; // Set the first message
           console.log("First Message:", firstMessage);
           console.log("Caller Number:", callerNumber);
 
@@ -314,7 +377,7 @@ fastify.register(async (fastify) => {
           );
         }
 
-        // Handle function calls (for Q&A and booking a flight)
+        // Handle function calls (for Q&A and booking a medical appointment)
         if (response.type === "response.function_call_arguments.done") {
           console.log("Function called:", response);
           const functionName = response.name;
@@ -360,7 +423,7 @@ fastify.register(async (fastify) => {
                   type: "response.create",
                   response: {
                     modalities: ["text", "audio"],
-                    instructions: `Kullanıcının sorusuna (${question}) cevap verin: ${answerMessage}. Kısa ve arkadaşça cevap verin.`,
+                    instructions: `Kullanıcının "${question}" sorusuna bu bilgiye dayanarak yanıt verin: ${answerMessage}. Kısa ve dostça olun.`,
                   },
                 })
               );
@@ -368,14 +431,15 @@ fastify.register(async (fastify) => {
               console.error("Error processing question:", error);
               sendErrorResponse(); // Send an error response if something goes wrong
             }
-          } else if (functionName === "book_flight") {
-            // If the book_flight function is called
-            const address = args.address; // Get the address
+          } else if (functionName === "book_medical_appointment") {
+            // Handle booking a medical appointment
+            const date = args.date;
+            const service = args.service;
             try {
               const webhookResponse = await sendToWebhook({
-                route: "4", // Route 4 for booking a flight
+                route: "4", // Route 4 for booking a medical appointment
                 data1: session.callerNumber,
-                data2: address, // Send the address to the webhook
+                data2: { date, service }, // Send the date and service to the webhook
               });
 
               console.log("Webhook response:", webhookResponse);
@@ -384,7 +448,7 @@ fastify.register(async (fastify) => {
               const parsedResponse = JSON.parse(webhookResponse);
               const bookingMessage =
                 parsedResponse.message ||
-                "Üzgünüm, bu uçuşu henüz rezerve edemedim.";
+                "Üzgünüm, şu anda tıbbi randevuyu ayarlayamadım.";
 
               const functionOutputEvent = {
                 type: "conversation.item.create",
@@ -402,12 +466,12 @@ fastify.register(async (fastify) => {
                   type: "response.create",
                   response: {
                     modalities: ["text", "audio"],
-                    instructions: `Uçuş rezervasyonu durumunu kullanıcıya bildirin: ${bookingMessage}. Kısa ve arkadaşça cevap verin.`,
+                    instructions: `Kullanıcıya tıbbi randevu durumu hakkında bilgi verin: ${bookingMessage}. Kısa ve dostça olun.`,
                   },
                 })
               );
             } catch (error) {
-              console.error("Error booking flight:", error);
+              console.error("Error booking medical appointment:", error);
               sendErrorResponse(); // Send an error response if booking fails
             }
           }
@@ -483,7 +547,7 @@ fastify.register(async (fastify) => {
           response: {
             modalities: ["text", "audio"],
             instructions:
-              "Üzgünüm, bu isteği işlemekte zorlanıyorum. Başka bir şey yapabilir miyim?",
+              "I apologize, but I'm having trouble processing your request right now. Is there anything else I can help you with?",
           },
         })
       );
