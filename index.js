@@ -37,7 +37,6 @@ TEMEL SORUMLULUKLAR:
 - \'book_flight\' fonksiyonu ile müşterilerinizin uçuş rezervasyonu yapmalarını sağlayın.
 Yanıtlarınız, müşteriye sorgulama süreci boyunca rehberlik ederken ve Clinic Emre'nin hizmetlerine olan güveni artırırken yapılandırılmış, bilgilendirici ve odaklı olmalıdır. İletişim tarzınızı, profesyonel standartları korurken müşterinin anlama düzeyine ve kültürel geçmişine uygun şekilde uyarlayın.`;
 
-
 const VOICE = "ash"; // The voice for AI responses
 const PORT = 8080;
 const HOST = "0.0.0.0";
@@ -71,7 +70,7 @@ fastify.all("/incoming-call", async (request, reply) => {
 
   // Get all incoming call details from the request body or query string
   const twilioParams = request.body || request.query;
-  console.log("Twilio Inbound Details:", JSON.stringify(twilioParams, null, 2)); // Log call details
+//   console.log("Twilio Inbound Details:", JSON.stringify(twilioParams, null, 2)); // Log call details
 
   // Extract caller's number and session ID (CallSid)
   const callerNumber = twilioParams.From || "Unknown"; // Caller phone number (default to 'Unknown' if missing)
@@ -80,7 +79,8 @@ fastify.all("/incoming-call", async (request, reply) => {
   console.log("Session ID (CallSid):", sessionId);
 
   // Send the caller's number to Make.com webhook to get a personalized first message
-  let firstMessage = "Merhaba, nasıl yardımcı olabilirim?"; // Default first message
+  let firstMessage =
+    "Merhaba, Clinic Emre'yi aradınız. Nasıl yardımcı olabilirim?"; // Default first message
 
   try {
     // Send a POST request to Make.com webhook to get a customized message for the caller
@@ -97,17 +97,16 @@ fastify.all("/incoming-call", async (request, reply) => {
     });
 
     if (webhookResponse.ok) {
-      const responseText = await webhookResponse.text(); // Get the text response from the webhook
-      console.log("Make.com webhook response:", responseText);
+      const responseData = await webhookResponse.json(); // Get the text response from the webhook
+      console.log("Make.com webhook response:", responseData);
       try {
-        const responseData = JSON.parse(responseText); // Try to parse the response as JSON
         if (responseData && responseData.firstMessage) {
           firstMessage = responseData.firstMessage; // If there's a firstMessage in the response, use it
           console.log("Parsed firstMessage from Make.com:", firstMessage);
         }
       } catch (parseError) {
         console.error("Error parsing webhook response:", parseError); // Log any errors while parsing the response
-        firstMessage = responseText.trim(); // Use the plain text response if parsing fails
+        firstMessage = responseData.trim(); // Use the plain text response if parsing fails
       }
     } else {
       console.error(
@@ -153,7 +152,6 @@ fastify.register(async (fastify) => {
     let openAiWsReady = false; // Flag to check if the OpenAI WebSocket is ready
     let queuedFirstMessage = null; // Queue the first message until OpenAI WebSocket is ready
     let threadId = ""; // Initialize threadId for tracking conversation threads
-
     // Use Twilio's CallSid as the session ID or create a new one based on the timestamp
     const sessionId =
       req.headers["x-twilio-call-sid"] || `session_${Date.now()}`;
@@ -239,7 +237,6 @@ fastify.register(async (fastify) => {
         queuedFirstMessage = null; // Clear the queue
       }
     };
-
     // Open event for when the OpenAI WebSocket connection is established
     openAiWs.on("open", () => {
       console.log("Connected to the OpenAI Realtime API"); // Log successful connection
