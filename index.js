@@ -213,6 +213,7 @@ fastify.register(async (fastify) => {
     let openAiWsReady = false; // Flag to check if the OpenAI WebSocket is ready
     let queuedFirstMessage = null; // Queue the first message until OpenAI WebSocket is ready
     let threadId = ""; // Initialize threadId for tracking conversation threads
+    let agentIsSpeaking = false; // Flag to check if the agent is speaking
 
     // Use Twilio's CallSid as the session ID or create a new one based on the timestamp
     const sessionId =
@@ -354,12 +355,32 @@ fastify.register(async (fastify) => {
               audio: data.media.payload, // Audio data from Twilio
             };
             openAiWs.send(JSON.stringify(audioAppend)); // Send the audio data to OpenAI
+
+            // Check if user is speaking during agent's response
+            if (agentIsSpeaking) {
+              console.log("User is speaking, interrupting agent response.");
+              // Logic to interrupt the agent's response
+              interruptAgentResponse();
+            }
           }
         }
       } catch (error) {
         console.error("Error parsing message:", error, "Message:", message); // Log any errors during message parsing
       }
     });
+
+    // Function to interrupt the agent's response
+    function interruptAgentResponse() {
+      // Logic to stop or pause the agent's response
+      // This could involve stopping audio playback or canceling the response
+      openAiWs.send(
+        JSON.stringify({
+          type: "response.cancel", // Hypothetical message type to cancel response
+        })
+      );
+      // Reset any flags or states related to agent speaking
+      agentIsSpeaking = false;
+    }
 
     // Handle incoming messages from OpenAI
     openAiWs.on("message", async (data) => {
@@ -368,6 +389,7 @@ fastify.register(async (fastify) => {
 
         // Handle audio responses from OpenAI
         if (response.type === "response.audio.delta" && response.delta) {
+          agentIsSpeaking = true; // Set flag indicating agent is speaking
           connection.send(
             JSON.stringify({
               event: "media",
