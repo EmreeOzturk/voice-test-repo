@@ -37,10 +37,9 @@ TEMEL SORUMLULUKLAR:
 - Uçuş rezervasyonu yapma
 - \'question_and_answer\' fonksiyonu ile müşterilerinizin sorularını yanıtlayın.
 - \'book_flight\' fonksiyonu ile müşterilerinizin uçuş rezervasyonu yapmalarını sağlayın.
-
-
-
 Yanıtlarınız, müşteriye sorgulama süreci boyunca rehberlik ederken ve Clinic Emre'nin hizmetlerine olan güveni artırırken yapılandırılmış, bilgilendirici ve odaklı olmalıdır. İletişim tarzınızı, profesyonel standartları korurken müşterinin anlama düzeyine ve kültürel geçmişine uygun şekilde uyarlayın.`;
+
+
 const VOICE = "ash"; // The voice for AI responses
 const PORT = 8080;
 const HOST = "0.0.0.0";
