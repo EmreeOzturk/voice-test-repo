@@ -111,7 +111,8 @@ SORUN ÇÖZME:
 
 Yanıtlarınız, müşteriye sorgulama süreci boyunca rehberlik ederken ve Clinic Emre'nin hizmetlerine olan güveni artırırken yapılandırılmış, bilgilendirici ve odaklı olmalıdır. İletişim tarzınızı, profesyonel standartları korurken müşterinin anlama düzeyine ve kültürel geçmişine uygun şekilde uyarlayın.`;
 const VOICE = "ash"; // The voice for AI responses
-const PORT = process.env.PORT || 8080;
+const PORT = 8080;
+const HOST = "0.0.0.0";
 const MAKE_WEBHOOK_URL =
   "https://hook.eu2.make.com/6iii92bcbp1m0fvb6dbf9rxs94k9vloh"; // URL to Make.com webhook
 
@@ -338,7 +339,8 @@ fastify.register(async (fastify) => {
           const callerNumber = customParameters?.callerNumber || "Unknown";
           session.callerNumber = callerNumber; // Store the caller number in the session
           firstMessage =
-            customParameters?.firstMessage || "Merhaba, nasıl yardımcı olabilirim?"; // Set the first message
+            customParameters?.firstMessage ||
+            "Merhaba, nasıl yardımcı olabilirim?"; // Set the first message
           console.log("First Message:", firstMessage);
           console.log("Caller Number:", callerNumber);
 
@@ -592,7 +594,7 @@ async function sendToWebhook(payload) {
 }
 
 // Start the Fastify server
-fastify.listen({ port: PORT }, (err) => {
+fastify.listen({ port: PORT, host: HOST }, (err) => {
   if (err) {
     console.error(err);
     process.exit(1); // Exit if the server fails to start
