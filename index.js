@@ -26,7 +26,7 @@ fastify.register(fastifyWs); // Register WebSocket support for real-time communi
 // System message template for the AI assistant's behavior and persona
 const SYSTEM_MESSAGE = `
 SİZİN ROLÜNÜZ:  
-Siz, Antalya/Konyaaltı'ndaki JCI akreditasyonuna sahip premium sağlık turizmi tesisi **Clinic Emre**’nin uzman AI resepsiyonistisiniz. Göreviniz, uluslararası ve yerel hastaların sorularını yanıtlamak, randevularını yönetmek ve olağanüstü müşteri hizmeti sunmaktır. Klinik hizmetleri, fiyatlandırma ve prosedürler hakkında kapsamlı bilgiye sahipsiniz.  
+Siz, Antalya/Konyaaltı'ndaki JCI akreditasyonuna sahip premium sağlık turizmi tesisi **Clinic Emre**'nin uzman AI resepsiyonistisiniz. Göreviniz, uluslararası ve yerel hastaların sorularını yanıtlamak, randevularını yönetmek ve olağanüstü müşteri hizmeti sunmaktır. Klinik hizmetleri, fiyatlandırma ve prosedürler hakkında kapsamlı bilgiye sahipsiniz.  
 
 ### TEMEL SORUMLULUKLAR  
 - Müşterileri sıcak ve profesyonel bir şekilde karşılama  
@@ -137,12 +137,11 @@ const LOG_EVENT_TYPES = [
   "conversation.item.input_audio_transcription.completed",
 ];
 
-// Adjust these constants at the top of the file
-const SPEECH_THRESHOLD = 0.15;        // Decreased threshold for easier detection
-const MIN_SPEECH_SAMPLES = 320;       // Reduced minimum samples (20ms at 16kHz)
-const CONSECUTIVE_WINDOWS = 2;        // Reduced number of consecutive windows needed
-const MIN_VOLUME = 0.10;             // Lowered minimum volume threshold
-const RMS_WINDOW_SIZE = 160;         // Keep window size the same
+// Adjust these constants for better speech detection
+const SPEECH_THRESHOLD = 0.2;        // Increased threshold to reduce false positives
+const SPEECH_WINDOW_SIZE = 10;       // Number of samples to consider for speech detection
+const SPEECH_DETECTION_RATIO = 0.7;  // Ratio of samples above threshold to consider as speech
+const USER_SPEECH_TIMEOUT = 500;     // Increased timeout to 500ms for more stable detection
 
 // Root route - just for checking if the server is running
 fastify.get("/", async (request, reply) => {
@@ -242,8 +241,6 @@ fastify.register(async (fastify) => {
     let userIsSpeaking = false; // Flag to track if user is speaking
     let lastUserSpeechTime = 0; // Timestamp of last detected user speech
     let speechBuffer = []; // Buffer for speech detection
-    const SPEECH_THRESHOLD = 0.15; // Threshold for speech detection
-    const USER_SPEECH_TIMEOUT = 300; // Timeout for speech detection in ms
 
     function calculateAudioLevel(audioPayload) {
       const buffer = Buffer.from(audioPayload, 'base64');
@@ -263,13 +260,25 @@ fastify.register(async (fastify) => {
       // Add current level to rolling buffer
       speechBuffer.push({ level: currentLevel, time: currentTime });
       
-      // Keep only recent samples
-      speechBuffer = speechBuffer.filter(sample => currentTime - sample.time < USER_SPEECH_TIMEOUT);
+      // Keep only recent samples within the window
+      speechBuffer = speechBuffer.filter(sample => 
+        currentTime - sample.time < USER_SPEECH_TIMEOUT
+      );
       
-      // Calculate average level from buffer
-      const averageLevel = speechBuffer.reduce((sum, sample) => sum + sample.level, 0) / speechBuffer.length;
+      // Only consider speech if we have enough samples
+      if (speechBuffer.length < SPEECH_WINDOW_SIZE) {
+        return false;
+      }
       
-      return averageLevel > SPEECH_THRESHOLD;
+      // Count how many samples are above the threshold
+      const samplesAboveThreshold = speechBuffer.filter(
+        sample => sample.level > SPEECH_THRESHOLD
+      ).length;
+      
+      // Calculate the ratio of samples above threshold
+      const ratio = samplesAboveThreshold / speechBuffer.length;
+      
+      return ratio > SPEECH_DETECTION_RATIO;
     }
 
     function interruptAgentResponse() {
@@ -432,11 +441,13 @@ fastify.register(async (fastify) => {
             if (!userIsSpeaking) {
               userIsSpeaking = true;
               console.log('User started speaking');
-            }
-            
-            // If agent is speaking and we detect user speech, interrupt
-            if (agentIsSpeaking && currentTime - lastUserSpeechTime < USER_SPEECH_TIMEOUT) {
-              interruptAgentResponse();
+              
+              // Only interrupt if the user has been speaking for a minimum duration
+              if (agentIsSpeaking && 
+                  speechBuffer.length >= SPEECH_WINDOW_SIZE && 
+                  currentTime - lastUserSpeechTime > USER_SPEECH_TIMEOUT) {
+                interruptAgentResponse();
+              }
             }
           } else {
             // Check if user stopped speaking
