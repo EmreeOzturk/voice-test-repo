@@ -97,7 +97,7 @@ const SYSTEM_MESSAGE = `
 `;
 
 // Some default constants used throughout the application
-const VOICE = "alloy"; // The voice for AI responses
+const VOICE = "onyx"; // The voice for AI responses
 const PORT = 8080;
 const HOST = "0.0.0.0";
 const MAKE_WEBHOOK_URL =
