@@ -138,17 +138,15 @@ const LOG_EVENT_TYPES = [
 ];
 
 // Adjust these constants for less sensitive speech detection
-const SPEECH_THRESHOLD = 0.15;         // Lowered threshold to be less sensitive
-const SPEECH_WINDOW_SIZE = 15;         // Increased window size for more stable detection
-const SPEECH_DETECTION_RATIO = 0.6;    // Lowered ratio requirement
-const USER_SPEECH_TIMEOUT = 800;       // Increased timeout for more stability
-const SPEECH_OVERLAP_THRESHOLD = 2000; // Increased to 2 seconds for more natural conversation
-const MIN_SPEECH_SAMPLES = 5;          // Minimum number of samples before considering speech
-
-// Add new constants for improved detection
-const NOISE_FLOOR = 0.05;              // Minimum level to consider as potential speech
-const CONSECUTIVE_SAMPLES_NEEDED = 3;   // Number of consecutive samples needed above threshold
-const MAX_SILENCE_GAPS = 2;            // Maximum number of silence gaps allowed in speech detection
+const SPEECH_THRESHOLD = 0.1;          // Lowered threshold
+const SPEECH_WINDOW_SIZE = 20;         // Increased window size
+const SPEECH_DETECTION_RATIO = 0.5;    // Lowered ratio requirement
+const USER_SPEECH_TIMEOUT = 1000;      // Increased timeout
+const SPEECH_OVERLAP_THRESHOLD = 2500; // Increased overlap to 2.5 seconds
+const MIN_SPEECH_SAMPLES = 5;          // Minimum number of samples
+const NOISE_FLOOR = 0.03;              // Lowered noise floor
+const CONSECUTIVE_SAMPLES_NEEDED = 5;  // Increased consecutive samples
+const MAX_SILENCE_GAPS = 3;            // Increased allowed silence gaps
 
 let speechBuffer = [];
 let consecutiveSpeechCount = 0;
@@ -415,7 +413,7 @@ fastify.register(async (fastify) => {
     // Handle messages from Twilio (media stream) and send them to OpenAI
     connection.on("message", (message) => {
       try {
-        const data = JSON.parse(message); // Parse the incoming message from Twilio
+        const data = JSON.parse(message);
 
         if (data.event === "start") {
           // When the call starts
@@ -479,6 +477,15 @@ fastify.register(async (fastify) => {
               console.log('User stopped speaking');
             }
           }
+        } else if (data.event === 'clear') {
+          console.log('Clearing media stream');
+          speechBuffer = [];
+          consecutiveSpeechCount = 0;
+          silenceGapCount = 0;
+          lastSpeechLevel = 0;
+          userIsSpeaking = false;
+          agentIsSpeaking = false;
+          speechStartTime = null;
         }
       } catch (error) {
         console.error("Error parsing message:", error, "Message:", message);
@@ -662,6 +669,12 @@ fastify.register(async (fastify) => {
           },
         })
       );
+    }
+
+    // Define the interruptAgentResponse function
+    function interruptAgentResponse() {
+      console.log("Interrupting agent response");
+      openAiWs.send(JSON.stringify({ type: "response.cancel" }));
     }
   });
 });
