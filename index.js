@@ -137,15 +137,86 @@ const LOG_EVENT_TYPES = [
   "conversation.item.input_audio_transcription.completed",
 ];
 
-// Adjust these constants for better speech detection
-const SPEECH_THRESHOLD = 0.2;        // Increased threshold to reduce false positives
-const SPEECH_WINDOW_SIZE = 10;       // Number of samples to consider for speech detection
-const SPEECH_DETECTION_RATIO = 0.7;  // Ratio of samples above threshold to consider as speech
-const USER_SPEECH_TIMEOUT = 500;     // Increased timeout to 500ms for more stable detection
+// Adjust these constants for less sensitive speech detection
+const SPEECH_THRESHOLD = 0.15;         // Lowered threshold to be less sensitive
+const SPEECH_WINDOW_SIZE = 15;         // Increased window size for more stable detection
+const SPEECH_DETECTION_RATIO = 0.6;    // Lowered ratio requirement
+const USER_SPEECH_TIMEOUT = 800;       // Increased timeout for more stability
+const SPEECH_OVERLAP_THRESHOLD = 2000; // Increased to 2 seconds for more natural conversation
+const MIN_SPEECH_SAMPLES = 5;          // Minimum number of samples before considering speech
 
-// Add a new constant for overlap detection
-const SPEECH_OVERLAP_THRESHOLD = 1000; // Minimum overlap time in ms before interrupting
-let speechStartTime = null; // Track when continuous speech started
+// Add new constants for improved detection
+const NOISE_FLOOR = 0.05;              // Minimum level to consider as potential speech
+const CONSECUTIVE_SAMPLES_NEEDED = 3;   // Number of consecutive samples needed above threshold
+const MAX_SILENCE_GAPS = 2;            // Maximum number of silence gaps allowed in speech detection
+
+let speechBuffer = [];
+let consecutiveSpeechCount = 0;
+let silenceGapCount = 0;
+let lastSpeechLevel = 0;
+
+function calculateAudioLevel(audioPayload) {
+  const buffer = Buffer.from(audioPayload, 'base64');
+  const samples = new Int16Array(buffer.buffer);
+  
+  // Calculate RMS (Root Mean Square) for better volume detection
+  let sumSquares = 0;
+  for (let i = 0; i < samples.length; i++) {
+    sumSquares += samples[i] * samples[i];
+  }
+  const rms = Math.sqrt(sumSquares / samples.length) / 32768.0;
+  
+  // Apply smoothing
+  const smoothingFactor = 0.7;
+  const smoothedLevel = (smoothingFactor * lastSpeechLevel) + ((1 - smoothingFactor) * rms);
+  lastSpeechLevel = smoothedLevel;
+  
+  return smoothedLevel;
+}
+
+function isLikelySpeech(audioPayload) {
+  const currentLevel = calculateAudioLevel(audioPayload);
+  const currentTime = Date.now();
+  
+  // Add current level to rolling buffer
+  speechBuffer.push({ level: currentLevel, time: currentTime });
+  
+  // Keep only recent samples
+  speechBuffer = speechBuffer.filter(sample => 
+    currentTime - sample.time < USER_SPEECH_TIMEOUT
+  );
+  
+  // Not enough samples yet
+  if (speechBuffer.length < MIN_SPEECH_SAMPLES) {
+    return false;
+  }
+  
+  // Check for consecutive samples above threshold
+  if (currentLevel > SPEECH_THRESHOLD) {
+    consecutiveSpeechCount++;
+    silenceGapCount = 0;
+  } else if (currentLevel <= NOISE_FLOOR) {
+    consecutiveSpeechCount = 0;
+    silenceGapCount++;
+  }
+  
+  // Calculate the ratio of samples above threshold
+  const samplesAboveThreshold = speechBuffer.filter(
+    sample => sample.level > SPEECH_THRESHOLD
+  ).length;
+  const ratio = samplesAboveThreshold / speechBuffer.length;
+  
+  // Complex speech detection logic
+  const hasConsecutiveSpeech = consecutiveSpeechCount >= CONSECUTIVE_SAMPLES_NEEDED;
+  const hasAcceptableSilenceGaps = silenceGapCount <= MAX_SILENCE_GAPS;
+  const hasGoodSpeechRatio = ratio > SPEECH_DETECTION_RATIO;
+  const isAboveNoiseFloor = currentLevel > NOISE_FLOOR;
+  
+  return hasConsecutiveSpeech && 
+         hasAcceptableSilenceGaps && 
+         hasGoodSpeechRatio && 
+         isAboveNoiseFloor;
+}
 
 // Root route - just for checking if the server is running
 fastify.get("/", async (request, reply) => {
@@ -244,66 +315,7 @@ fastify.register(async (fastify) => {
     let agentIsSpeaking = false; // Flag to check if the agent is speaking
     let userIsSpeaking = false; // Flag to track if user is speaking
     let lastUserSpeechTime = 0; // Timestamp of last detected user speech
-    let speechBuffer = []; // Buffer for speech detection
-
-    function calculateAudioLevel(audioPayload) {
-      const buffer = Buffer.from(audioPayload, 'base64');
-      const samples = new Int16Array(buffer.buffer);
-      
-      let sum = 0;
-      for (let i = 0; i < samples.length; i++) {
-        sum += Math.abs(samples[i]);
-      }
-      return sum / samples.length / 32768.0; // Normalize to 0-1 range
-    }
-
-    function isLikelySpeech(audioPayload) {
-      const currentLevel = calculateAudioLevel(audioPayload);
-      const currentTime = Date.now();
-      
-      // Add current level to rolling buffer
-      speechBuffer.push({ level: currentLevel, time: currentTime });
-      
-      // Keep only recent samples within the window
-      speechBuffer = speechBuffer.filter(sample => 
-        currentTime - sample.time < USER_SPEECH_TIMEOUT
-      );
-      
-      // Only consider speech if we have enough samples
-      if (speechBuffer.length < SPEECH_WINDOW_SIZE) {
-        return false;
-      }
-      
-      // Count how many samples are above the threshold
-      const samplesAboveThreshold = speechBuffer.filter(
-        sample => sample.level > SPEECH_THRESHOLD
-      ).length;
-      
-      // Calculate the ratio of samples above threshold
-      const ratio = samplesAboveThreshold / speechBuffer.length;
-      
-      return ratio > SPEECH_DETECTION_RATIO;
-    }
-
-    function interruptAgentResponse() {
-      if (!agentIsSpeaking) return;
-      
-      console.log('Interrupting agent response');
-      
-      // Send cancel message to OpenAI
-      openAiWs.send(JSON.stringify({
-        type: 'response.cancel'
-      }));
-      
-      // Reset state
-      agentIsSpeaking = false;
-      
-      // Notify client of interruption
-      connection.send(JSON.stringify({
-        type: 'interrupt',
-        timestamp: Date.now()
-      }));
-    }
+    let speechStartTime = null; // Track when continuous speech started
 
     // Use Twilio's CallSid as the session ID or create a new one based on the timestamp
     const sessionId =
@@ -448,24 +460,28 @@ fastify.register(async (fastify) => {
             
             lastUserSpeechTime = currentTime;
             
-            // Only interrupt if both the agent is speaking AND user has been speaking continuously
+            // Only interrupt if there's significant overlap and agent is speaking
             if (agentIsSpeaking && 
                 speechStartTime && 
-                currentTime - speechStartTime > SPEECH_OVERLAP_THRESHOLD) {
-              console.log('Speech overlap detected, interrupting agent');
+                currentTime - speechStartTime > SPEECH_OVERLAP_THRESHOLD &&
+                consecutiveSpeechCount >= CONSECUTIVE_SAMPLES_NEEDED) {
+              console.log('Significant speech overlap detected, interrupting agent');
               interruptAgentResponse();
             }
           } else {
-            // Check if user stopped speaking
-            if (userIsSpeaking && currentTime - lastUserSpeechTime > USER_SPEECH_TIMEOUT) {
+            // Check if user stopped speaking with more lenient timeout
+            if (userIsSpeaking && 
+                currentTime - lastUserSpeechTime > USER_SPEECH_TIMEOUT &&
+                silenceGapCount > MAX_SILENCE_GAPS) {
               userIsSpeaking = false;
               speechStartTime = null;
+              consecutiveSpeechCount = 0;
               console.log('User stopped speaking');
             }
           }
         }
       } catch (error) {
-        console.error("Error parsing message:", error, "Message:", message); // Log any errors during message parsing
+        console.error("Error parsing message:", error, "Message:", message);
       }
     });
 
@@ -474,16 +490,17 @@ fastify.register(async (fastify) => {
       try {
         const response = JSON.parse(data);
 
-        // Set agent speaking state when audio starts
         if (response.type === "response.audio.delta" && response.delta) {
           if (!agentIsSpeaking) {
             agentIsSpeaking = true;
             console.log('Agent started speaking');
           }
           
-          // Only send audio if there's no sustained user speech
-          if (!userIsSpeaking || !speechStartTime || 
-              Date.now() - speechStartTime <= SPEECH_OVERLAP_THRESHOLD) {
+          // Only send audio if there's no significant user speech overlap
+          if (!userIsSpeaking || 
+              !speechStartTime || 
+              Date.now() - speechStartTime <= SPEECH_OVERLAP_THRESHOLD ||
+              consecutiveSpeechCount < CONSECUTIVE_SAMPLES_NEEDED) {
             connection.send(JSON.stringify({
               event: "media",
               streamSid: streamSid,
@@ -492,10 +509,12 @@ fastify.register(async (fastify) => {
           }
         }
 
-        // Clear agent speaking state when response is done
         if (response.type === "response.done") {
           agentIsSpeaking = false;
           console.log('Agent finished speaking');
+          // Reset speech detection counters
+          consecutiveSpeechCount = 0;
+          silenceGapCount = 0;
           const agentMessage = response.response.output[0]?.content?.find(
             (content) => content.transcript
           )?.transcript || "Agent message not found";
