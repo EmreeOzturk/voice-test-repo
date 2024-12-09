@@ -25,97 +25,79 @@ fastify.register(fastifyWs); // Register WebSocket support for real-time communi
 
 // System message template for the AI assistant's behavior and persona
 const SYSTEM_MESSAGE = `
-SİZİN ROLÜNÜZ:  
-Siz, Antalya/Konyaaltı'ndaki JCI akreditasyonuna sahip premium sağlık turizmi tesisi **Clinic Emre**'nin uzman AI resepsiyonistisiniz. Göreviniz, uluslararası ve yerel hastaların sorularını yanıtlamak, randevularını yönetmek ve olağanüstü müşteri hizmeti sunmaktır. Klinik hizmetleri, fiyatlandırma ve prosedürler hakkında kapsamlı bilgiye sahipsiniz.  
+#AI Asistan Profili
+- Rol: Clinic Emre Antalya'nın Uluslararası Tıbbi Turizm Danışmanı
+- Deneyim: 5+ yıl uluslararası hasta koordinasyonu
+- Uzmanlık: Estetik cerrahi, diş tedavileri, saç ekimi ve genel tıbbi prosedürler
+- İletişim Dili: Türkçe (birincil), İngilizce (gerektiğinde)
 
-### TEMEL SORUMLULUKLAR  
-- Müşterileri sıcak ve profesyonel bir şekilde karşılama  
-- Gerekli müşteri bilgilerini sistematik şekilde toplama  
-- Doğru hizmet detayları ve fiyatlandırma bilgilerini paylaşma  
-- Randevu planlama desteği sağlama  
-- Seyahat ve konaklama rehberliği yapma  
-- Tedaviler ve tesis hakkında soruları yanıtlayarak rehberlik etme  
-- Uçuş rezervasyonları yapma (book_flight fonksiyonu ile)  
+#Temel Yetkinlikler
+- Tıbbi prosedür danışmanlığı
+- Uluslararası hasta koordinasyonu
+- Seyahat ve konaklama planlaması
+- Tedavi maliyeti ve finansman seçenekleri
+- Vize ve seyahat belgeleri desteği
 
-### KLİNİK DETAYLARI  
-- **Konum:** Konyaaltı Bulvarı, No:123, Antalya, Türkiye  
-- **Çalışma Saatleri:** Pazartesi-Cumartesi 09:00-19:00 (GMT+3)  
-- **Diller:** Türkçe, İngilizce, Rusça, Almanca, Arapça  
-- **Personel:**  
-  - 6 Diş Uzmanı, 4 Estetik Cerrah, 2 Dermatolog, 3 Pratisyen Hekim, 12 Hemşire  
-- **Sertifikalar:** JCI Akreditasyonu, ISO 9001:2015  
+#İletişim Protokolü
+1. Karşılama:
+   - Sıcak ve profesyonel selamlama
+   - Hastanın adını ve iletişim tercihini not etme
+   - Önceki iletişimlere referans verme (varsa)
 
-### HİZMETLER VE FİYATLAR  
-#### Diş Hizmetleri:  
-- **İmplant:** €500-1200 / implant (2-5 gün)  
-- **Lamina:** €200-400 / diş (5-7 gün)  
-- **Tam Gülüş Tasarımı:** €3000-8000 (7-10 gün)  
+2. İhtiyaç Analizi:
+   - Tıbbi gereksinimler için detaylı sorgulama
+   - Mevcut sağlık durumu değerlendirmesi
+   - Tedavi beklentilerinin netleştirilmesi
+   - Zaman ve bütçe kısıtlamalarını anlama
 
-#### Estetik İşlemler:  
-- **Botoks:** €200-400 / bölge (1 gün)  
-- **Yüz Dolgusu:** €300-600 / şırınga (1 gün)  
-- **Saç Ekimi:** €2000-4000 (1-2 gün)  
+3. Çözüm Sunumu:
+   - Uygun tedavi seçeneklerinin açıklanması
+   - Prosedür detayları ve beklenen sonuçlar
+   - Maliyet ve ödeme seçenekleri
+   - Tedavi takvimi önerisi
 
-### PAKET HİZMETLER  
-- Ücretsiz ilk online konsültasyon  
-- Havalimanı/otel transferleri  
-- Tercümanlık hizmetleri  
-- 7/24 acil destek  
-- Tedavi sonrası bakım  
+4. Lojistik Planlama:
+   - Seyahat tarihleri koordinasyonu
+   - Konaklama seçenekleri
+   - Havaalanı transferleri
+   - Şehir içi ulaşım desteği
 
-### KONAKLAMA SEÇENEKLERİ  
-- **5 yıldızlı oteller:** €80-150 / gece  
-- **4 yıldızlı oteller:** €50-80 / gece  
-- **Apart oteller:** €40-70 / gece  
+#Önemli Kurallar
+- Her zaman hasta mahremiyetini koru
+- Tıbbi bilgileri anlaşılır dilde aktar
+- Gerçekçi beklentiler oluştur
+- Şeffaf fiyatlandırma politikası izle
+- Hasta güvenliğini önceliklendir
 
-### ETKİLEŞİM PROTOKOLÜ  
-1. **Bilgi Toplama:**  
-   - Tam ad  
-   - İstenen tedavi  
-   - Tarih  
+#Klinik Bilgileri
+- Lokasyon: Antalya, Türkiye
+- Akreditasyonlar: JCI, ISO
+- Uzman kadro: 20+ uzman hekim
+- Dil destekleri: Türkçe, İngilizce, Rusça, Arapça
+- 7/24 hasta desteği
 
-2. **Bilgi Sağlama:**  
-   - Tedavi detayları  
-   - Süre ve fiyat  
-   - Paket dahilindeki hizmetler  
-   - Ödeme koşulları (%20 depozito, EUR/USD/GBP/TRY)  
+#Acil Durumlar
+- Acil tıbbi durumlarda hızlı müdahale protokolü
+- 24 saat erişilebilir acil hat
+- Anlaşmalı hastaneler ağı
+- Ambulans ve transfer hizmetleri
 
-3. **Önemli Hatırlatmalar:**  
-   - Randevudan 7+ gün önce ücretsiz iptal  
-   - Medikal vize desteği  
-   - Tedavi sonrası takip bakımı  
-   - Sigorta kapsamı bilgisi  
+#Takip Protokolü
+- Tedavi öncesi hazırlık rehberliği
+- Tedavi sürecinde günlük durum takibi
+- Taburculuk sonrası bakım talimatları
+- Uzun vadeli iyileşme takibi
+- Kontrol randevuları koordinasyonu
 
-### İLETİŞİM TARZI  
-- **Ton:** Sıcak, profesyonel ve kültürel hassasiyetli  
-- **Dil:** Açık ve basit  
-- **Detay Yönetimi:**  
-  - Kullanıcı istemedikçe gereksiz detaylardan kaçının.  
-  - Konuşmayı gereksiz yere uzatmayın.  
-
-### KISITLAMALAR  
-- Tıbbi tavsiye vermeyin  
-- Tedavi sonuçları hakkında garanti sunmayın  
-- Personel kişisel bilgilerini paylaşmayın  
-- Mevcut olmayan hizmetlerden bahsetmeyin  
-- Fiyat pazarlığı yapmayın  
-- Gizli klinik bilgilerini paylaşmayın  
-
-### SORUN ÇÖZME  
-- Endişeleri profesyonelce ele alın  
-- Tıbbi soruları uzmanlara yönlendirin  
-- Alternatif çözümler sunun  
-- Sakin ve yardımsever kalın  
-
-### DAVRANIŞ İLKELERİ  
-- **Üzgün Olduğunuzu Sıkça Belirtmeyin:** Gereksiz özürlerden kaçının; bunun yerine çözüme odaklanın.  
-- **Doğrudan ve Net Olun:** Kullanıcıların zamanını gereksiz yere harcamayın; odaklı ve kısa yanıtlar verin.  
-
-Bu rehber, kullanıcıya en hızlı ve en doğru hizmeti sunmanıza yardımcı olacaktır.  
+#Kalite Güvencesi
+- Hasta memnuniyeti odaklı hizmet
+- Sürekli geri bildirim mekanizması
+- Komplikasyon yönetimi protokolleri
+- Uluslararası standartlara uygunluk
 `;
 
 // Some default constants used throughout the application
-const VOICE = "coral"; // The voice for AI responses
+const VOICE = "alloy"; // The voice for AI responses
 const PORT = 8080;
 const HOST = "0.0.0.0";
 const MAKE_WEBHOOK_URL =
@@ -136,117 +118,6 @@ const LOG_EVENT_TYPES = [
   "response.text.done",
   "conversation.item.input_audio_transcription.completed",
 ];
-
-// Adjust these constants for less sensitive speech detection
-const SPEECH_THRESHOLD = 0.1;          // Lowered threshold
-const SPEECH_WINDOW_SIZE = 20;         // Increased window size
-const SPEECH_DETECTION_RATIO = 0.5;    // Lowered ratio requirement
-const USER_SPEECH_TIMEOUT = 1000;      // Increased timeout
-const SPEECH_OVERLAP_THRESHOLD = 2500; // Increased overlap to 2.5 seconds
-const MIN_SPEECH_SAMPLES = 5;          // Minimum number of samples
-const NOISE_FLOOR = 0.03;              // Lowered noise floor
-const CONSECUTIVE_SAMPLES_NEEDED = 5;  // Increased consecutive samples
-const MAX_SILENCE_GAPS = 3;            // Increased allowed silence gaps
-
-let speechBuffer = [];
-let consecutiveSpeechCount = 0;
-let silenceGapCount = 0;
-let lastSpeechLevel = 0;
-
-// Add a minimum audio level threshold
-const MINIMUM_AUDIO_LEVEL = 0.0001; // Minimum level to even consider processing audio
-
-function calculateAudioLevel(audioPayload) {
-  const buffer = Buffer.from(audioPayload, 'base64');
-  const samples = new Int16Array(buffer.buffer);
-  
-  // Calculate RMS (Root Mean Square) for better volume detection
-  let sumSquares = 0;
-  for (let i = 0; i < samples.length; i++) {
-    sumSquares += samples[i] * samples[i];
-  }
-  const rms = Math.sqrt(sumSquares / samples.length) / 32768.0;
-  
-  // Apply smoothing
-  const smoothingFactor = 0.7;
-  const smoothedLevel = (smoothingFactor * lastSpeechLevel) + ((1 - smoothingFactor) * rms);
-  lastSpeechLevel = smoothedLevel;
-  
-  return smoothedLevel;
-}
-
-function isLikelySpeech(audioPayload) {
-  const currentLevel = calculateAudioLevel(audioPayload);
-  const currentTime = Date.now();
-  
-  // Immediately return false if audio level is below minimum threshold
-  // This handles cases where mic is off or there's only system noise
-  if (currentLevel < MINIMUM_AUDIO_LEVEL) {
-    console.log("Audio level below minimum threshold:", currentLevel);
-    return false;
-  }
-  
-  // Add current level to rolling buffer
-  speechBuffer.push({ level: currentLevel, time: currentTime });
-  
-  // Keep only recent samples
-  speechBuffer = speechBuffer.filter(sample => 
-    currentTime - sample.time < USER_SPEECH_TIMEOUT
-  );
-  
-  // Not enough samples yet
-  if (speechBuffer.length < MIN_SPEECH_SAMPLES) {
-    console.log("Not enough samples:", speechBuffer.length);
-    return false;
-  }
-  
-  // Enhanced logging for audio levels
-  console.log("Audio Analysis:", {
-    currentLevel,
-    bufferSize: speechBuffer.length,
-    averageLevel: speechBuffer.reduce((sum, sample) => sum + sample.level, 0) / speechBuffer.length,
-    minLevel: Math.min(...speechBuffer.map(sample => sample.level)),
-    maxLevel: Math.max(...speechBuffer.map(sample => sample.level))
-  });
-  
-  // Check for consecutive samples above threshold
-  if (currentLevel > SPEECH_THRESHOLD) {
-    consecutiveSpeechCount++;
-    silenceGapCount = 0;
-  } else if (currentLevel <= NOISE_FLOOR) {
-    consecutiveSpeechCount = 0;
-    silenceGapCount++;
-  }
-  
-  // Calculate the ratio of samples above threshold
-  const samplesAboveThreshold = speechBuffer.filter(
-    sample => sample.level > SPEECH_THRESHOLD
-  ).length;
-  const ratio = samplesAboveThreshold / speechBuffer.length;
-  
-  // Complex speech detection logic
-  const hasConsecutiveSpeech = consecutiveSpeechCount >= CONSECUTIVE_SAMPLES_NEEDED;
-  const hasAcceptableSilenceGaps = silenceGapCount <= MAX_SILENCE_GAPS;
-  const hasGoodSpeechRatio = ratio > SPEECH_DETECTION_RATIO;
-  const isAboveNoiseFloor = currentLevel > NOISE_FLOOR;
-
-  // Enhanced logging
-  console.log("isLikelySpeech: ", {
-    currentLevel,
-    consecutiveSpeechCount,
-    silenceGapCount,
-    ratio,
-    hasConsecutiveSpeech,
-    hasAcceptableSilenceGaps,
-    hasGoodSpeechRatio,
-    isAboveNoiseFloor
-  });
-  
-  return hasConsecutiveSpeech && 
-         hasAcceptableSilenceGaps && 
-         hasGoodSpeechRatio && 
-         isAboveNoiseFloor;
-}
 
 // Root route - just for checking if the server is running
 fastify.get("/", async (request, reply) => {
@@ -342,10 +213,6 @@ fastify.register(async (fastify) => {
     let openAiWsReady = false; // Flag to check if the OpenAI WebSocket is ready
     let queuedFirstMessage = null; // Queue the first message until OpenAI WebSocket is ready
     let threadId = ""; // Initialize threadId for tracking conversation threads
-    let agentIsSpeaking = false; // Flag to check if the agent is speaking
-    let userIsSpeaking = false; // Flag to track if user is speaking
-    let lastUserSpeechTime = 0; // Timestamp of last detected user speech
-    let speechStartTime = null; // Track when continuous speech started
 
     // Use Twilio's CallSid as the session ID or create a new one based on the timestamp
     const sessionId =
@@ -442,212 +309,99 @@ fastify.register(async (fastify) => {
       sendFirstMessage(); // Send the first message if queued
     });
 
-    // Add a flag to track if we're currently processing an interruption
-    let isProcessingInterruption = false;
-
-    // Function to safely interrupt the agent
-    function interruptAgentResponse() {
-      if (isProcessingInterruption) {
-        console.log("Already processing an interruption, skipping");
-        return;
-      }
-
-      console.log("Interrupting agent response");
-      isProcessingInterruption = true;
-      
-      openAiWs.send(JSON.stringify({ type: "response.cancel" }));
-      
-      // Reset the interruption flag after a short delay
-      setTimeout(() => {
-        isProcessingInterruption = false;
-      }, 1000);
-    }
-
-    // Update the connection message handler
+    // Handle messages from Twilio (media stream) and send them to OpenAI
     connection.on("message", (message) => {
       try {
-        const data = JSON.parse(message);
+        const data = JSON.parse(message); // Parse the incoming message from Twilio
 
-        if (data.event === "media" && data.media && data.media.payload) {
-          const currentTime = Date.now();
-          
-          // Get the audio level before full speech detection
-          const currentLevel = calculateAudioLevel(data.media.payload);
-          
-          // Skip processing if audio level is too low (mic off or muted)
-          if (currentLevel < MINIMUM_AUDIO_LEVEL) {
-            if (userIsSpeaking) {
-              console.log('Audio level too low, assuming user stopped speaking');
-              userIsSpeaking = false;
-              speechStartTime = null;
-              consecutiveSpeechCount = 0;
-            }
-            return;
+        if (data.event === "start") {
+          // When the call starts
+          streamSid = data.start.streamSid; // Get the stream ID
+          const callSid = data.start.callSid; // Get the call SID
+          const customParameters = data.start.customParameters; // Get custom parameters (firstMessage, callerNumber)
+
+          console.log("CallSid:", callSid);
+          console.log("StreamSid:", streamSid);
+          console.log("Custom Parameters:", customParameters);
+
+          // Capture callerNumber and firstMessage from custom parameters
+          const callerNumber = customParameters?.callerNumber || "Unknown";
+          session.callerNumber = callerNumber; // Store the caller number in the session
+          firstMessage =
+            customParameters?.firstMessage || "Hello, how can I assist you?"; // Set the first message
+          console.log("First Message:", firstMessage);
+          console.log("Caller Number:", callerNumber);
+
+          // Prepare the first message, but don't send it until the OpenAI connection is ready
+          queuedFirstMessage = {
+            type: "conversation.item.create",
+            item: {
+              type: "message",
+              role: "user",
+              content: [{ type: "input_text", text: firstMessage }],
+            },
+          };
+
+          if (openAiWsReady) {
+            sendFirstMessage(); // Send the first message if OpenAI is ready
           }
-          
-          const speechDetected = isLikelySpeech(data.media.payload);
-          
-          // Log the current state for debugging
-          console.log("Current state:", {
-            speechDetected,
-            userIsSpeaking,
-            agentIsSpeaking,
-            isProcessingInterruption,
-            speechStartTime: speechStartTime ? currentTime - speechStartTime : null,
-            lastUserSpeechTime: lastUserSpeechTime ? currentTime - lastUserSpeechTime : null
-          });
-          
-          if (speechDetected) {
-            if (!userIsSpeaking) {
-              userIsSpeaking = true;
-              speechStartTime = currentTime;
-              console.log('User started speaking');
-            }
-            
-            lastUserSpeechTime = currentTime;
-            
-            // Only interrupt if ALL conditions are met
-            if (agentIsSpeaking && 
-                speechStartTime && 
-                currentTime - speechStartTime > SPEECH_OVERLAP_THRESHOLD &&
-                consecutiveSpeechCount >= CONSECUTIVE_SAMPLES_NEEDED &&
-                !isProcessingInterruption &&
-                silenceGapCount <= MAX_SILENCE_GAPS) {
-              console.log('Significant speech overlap detected:', {
-                overlapDuration: currentTime - speechStartTime,
-                consecutiveSpeechCount,
-                silenceGapCount
-              });
-              interruptAgentResponse();
-            }
-          } else {
-            // Check if user stopped speaking
-            if (userIsSpeaking && 
-                currentTime - lastUserSpeechTime > USER_SPEECH_TIMEOUT &&
-                silenceGapCount > MAX_SILENCE_GAPS) {
-              userIsSpeaking = false;
-              speechStartTime = null;
-              consecutiveSpeechCount = 0;
-              console.log('User stopped speaking');
-            }
+        } else if (data.event === "media") {
+          // When media (audio) is received
+          if (openAiWs.readyState === WebSocket.OPEN) {
+            // Check if the OpenAI WebSocket is open
+            const audioAppend = {
+              type: "input_audio_buffer.append", // Append audio data
+              audio: data.media.payload, // Audio data from Twilio
+            };
+            openAiWs.send(JSON.stringify(audioAppend)); // Send the audio data to OpenAI
           }
-        } else if (data.event === 'clear') {
-          console.log('Clearing media stream');
-          resetSpeechState();
         }
       } catch (error) {
-        console.error("Error parsing message:", error);
-      }
-    });
-
-    // Add a function to reset all speech-related state
-    function resetSpeechState() {
-      speechBuffer = [];
-      consecutiveSpeechCount = 0;
-      silenceGapCount = 0;
-      lastSpeechLevel = 0;
-      userIsSpeaking = false;
-      agentIsSpeaking = false;
-      speechStartTime = null;
-      lastUserSpeechTime = null;
-      isProcessingInterruption = false;
-      console.log('Speech state reset');
-    }
-
-    // Update the OpenAI message handler
-    openAiWs.on("message", async (data) => {
-      try {
-        const response = JSON.parse(data);
-
-        if (response.type === "response.audio.delta" && response.delta) {
-          if (!agentIsSpeaking) {
-            agentIsSpeaking = true;
-            console.log('Agent started speaking');
-          }
-          
-          // Only send audio if we're not processing an interruption
-          if (!isProcessingInterruption) {
-            connection.send(JSON.stringify({
-              event: "media",
-              streamSid: streamSid,
-              media: { payload: response.delta },
-            }));
-          }
-        }
-
-        if (response.type === "response.done") {
-          agentIsSpeaking = false;
-          isProcessingInterruption = false;
-          console.log('Agent finished speaking');
-          resetSpeechState();
-          // ... rest of response.done handling ...
-        }
-
-        // ... rest of the message handling code ...
-      } catch (error) {
-        console.error("Error processing OpenAI message:", error);
-        agentIsSpeaking = false;
-        isProcessingInterruption = false;
+        console.error("Error parsing message:", error, "Message:", message); // Log any errors during message parsing
       }
     });
 
     // Handle incoming messages from OpenAI
     openAiWs.on("message", async (data) => {
       try {
-        const response = JSON.parse(data);
+        const response = JSON.parse(data); // Parse the message from OpenAI
 
+        // Handle audio responses from OpenAI
         if (response.type === "response.audio.delta" && response.delta) {
-          if (!agentIsSpeaking) {
-            agentIsSpeaking = true;
-            console.log('Agent started speaking');
-          }
-          
-          // Only send audio if there's no significant user speech overlap
-          if (!userIsSpeaking || 
-              !speechStartTime || 
-              Date.now() - speechStartTime <= SPEECH_OVERLAP_THRESHOLD ||
-              consecutiveSpeechCount < CONSECUTIVE_SAMPLES_NEEDED) {
-            connection.send(JSON.stringify({
+          connection.send(
+            JSON.stringify({
               event: "media",
               streamSid: streamSid,
-              media: { payload: response.delta },
-            }));
-          }
+              media: { payload: response.delta }, // Send audio back to Twilio
+            })
+          );
         }
 
-        if (response.type === "response.done") {
-          agentIsSpeaking = false;
-          console.log('Agent finished speaking');
-          // Reset speech detection counters
-          consecutiveSpeechCount = 0;
-          silenceGapCount = 0;
-          const agentMessage = response.response.output[0]?.content?.find(
-            (content) => content.transcript
-          )?.transcript || "Agent message not found";
-          session.transcript += `Agent: ${agentMessage}\n`;
-          console.log(`Agent (${sessionId}): ${agentMessage}`);
-        }
-
-        // Handle function calls (for Q&A and booking)
+        // Handle function calls (for Q&A and booking a medical appointment)
         if (response.type === "response.function_call_arguments.done") {
           console.log("Function called:", response);
           const functionName = response.name;
-          const args = JSON.parse(response.arguments);
+          const args = JSON.parse(response.arguments); // Get the arguments passed to the function
 
           if (functionName === "question_and_answer") {
-            // Handle Q&A function
-            const question = args.question;
+            // If the Q&A function is called
+            const question = args.question; // Get the question
             try {
               const webhookResponse = await sendToWebhook({
-                route: "3",
+                route: "3", // Route 3 for Q&A
                 data1: question,
                 data2: threadId,
               });
 
               console.log("Webhook response:", webhookResponse);
-              const parsedResponse = JSON.parse(webhookResponse);
-              const answerMessage = parsedResponse.message || "Üzgünüm, bu soruya bir cevap bulamadım.";
 
+              // Parse the webhook response
+              const parsedResponse = JSON.parse(webhookResponse);
+              const answerMessage =
+                parsedResponse.message ||
+                "Üzgünüm, bu soruya bir cevap bulamadım.";
+
+              // Update the threadId if it's provided in the response
               if (parsedResponse.thread) {
                 threadId = parsedResponse.thread;
                 console.log("Updated thread ID:", threadId);
@@ -658,64 +412,89 @@ fastify.register(async (fastify) => {
                 item: {
                   type: "function_call_output",
                   role: "system",
-                  output: answerMessage,
+                  output: answerMessage, // Provide the answer from the webhook
                 },
               };
-              openAiWs.send(JSON.stringify(functionOutputEvent));
+              openAiWs.send(JSON.stringify(functionOutputEvent)); // Send the answer back to OpenAI
 
-              openAiWs.send(JSON.stringify({
-                type: "response.create",
-                response: {
-                  modalities: ["text", "audio"],
-                  instructions: `Kullanıcının "${question}" sorusuna bu bilgiye dayanarak yanıt verin: ${answerMessage}. Kısa ve dostça olun.`,
-                },
-              }));
+              // Trigger AI to generate a response based on the answer
+              openAiWs.send(
+                JSON.stringify({
+                  type: "response.create",
+                  response: {
+                    modalities: ["text", "audio"],
+                    instructions: `Kullanıcının "${question}" sorusuna bu bilgiye dayanarak yanıt verin: ${answerMessage}. Kısa ve dostça olun.`,
+                  },
+                })
+              );
             } catch (error) {
               console.error("Error processing question:", error);
-              sendErrorResponse();
+              sendErrorResponse(); // Send an error response if something goes wrong
             }
           } else if (functionName === "book_medical_appointment") {
-            // Handle booking function
-            const { date, service } = args;
+            // Handle booking a medical appointment
+            const date = args.date;
+            const service = args.service;
             try {
               const webhookResponse = await sendToWebhook({
-                route: "4",
+                route: "4", // Route 4 for booking a medical appointment
                 data1: session.callerNumber,
-                data2: { date, service },
+                data2: { date, service }, // Send the date and service to the webhook
               });
 
               console.log("Webhook response:", webhookResponse);
+
+              // Parse the webhook response
               const parsedResponse = JSON.parse(webhookResponse);
-              const bookingMessage = parsedResponse.message || "Üzgünüm, şu anda tıbbi randevuyu ayarlayamadım.";
+              const bookingMessage =
+                parsedResponse.message ||
+                "Üzgünüm, şu anda tıbbi randevuyu ayarlayamadım.";
 
               const functionOutputEvent = {
                 type: "conversation.item.create",
                 item: {
                   type: "function_call_output",
                   role: "system",
-                  output: bookingMessage,
+                  output: bookingMessage, // Provide the booking status
                 },
               };
-              openAiWs.send(JSON.stringify(functionOutputEvent));
+              openAiWs.send(JSON.stringify(functionOutputEvent)); // Send the booking status back to OpenAI
 
-              openAiWs.send(JSON.stringify({
-                type: "response.create",
-                response: {
-                  modalities: ["text", "audio"],
-                  instructions: `Kullanıcıya tıbbi randevu durumu hakkında bilgi verin: ${bookingMessage}. Kısa ve dostça olun.`,
-                },
-              }));
+              // Trigger AI to generate a response based on the booking
+              openAiWs.send(
+                JSON.stringify({
+                  type: "response.create",
+                  response: {
+                    modalities: ["text", "audio"],
+                    instructions: `Kullanıcıya tıbbi randevu durumu hakkında bilgi verin: ${bookingMessage}. Kısa ve dostça olun.`,
+                  },
+                })
+              );
             } catch (error) {
               console.error("Error booking medical appointment:", error);
-              sendErrorResponse();
+              sendErrorResponse(); // Send an error response if booking fails
             }
           }
         }
 
-        // Handle user transcription
-        if (response.type === "conversation.item.input_audio_transcription.completed" && response.transcript) {
-          const userMessage = response.transcript.trim();
-          session.transcript += `User: ${userMessage}\n`;
+        // Log agent response
+        if (response.type === "response.done") {
+          const agentMessage =
+            response.response.output[0]?.content?.find(
+              (content) => content.transcript
+            )?.transcript || "Agent message not found";
+          session.transcript += `Agent: ${agentMessage}\n`; // Add agent's message to the transcript
+          console.log(`Agent (${sessionId}): ${agentMessage}`);
+        }
+
+        // Log user transcription (input_audio_transcription.completed)
+        if (
+          response.type ===
+            "conversation.item.input_audio_transcription.completed" &&
+          response.transcript
+        ) {
+          const userMessage = response.transcript.trim(); // Get the user's transcribed message
+          session.transcript += `User: ${userMessage}\n`; // Add the user's message to the transcript
           console.log(`User (${sessionId}): ${userMessage}`);
         }
 
@@ -724,8 +503,12 @@ fastify.register(async (fastify) => {
           console.log(`Received event: ${response.type}`, response);
         }
       } catch (error) {
-        console.error("Error processing OpenAI message:", error);
-        agentIsSpeaking = false;
+        console.error(
+          "Error processing OpenAI message:",
+          error,
+          "Raw message:",
+          data
+        );
       }
     });
 
