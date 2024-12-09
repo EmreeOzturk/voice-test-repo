@@ -423,46 +423,48 @@ fastify.register(async (fastify) => {
       sendFirstMessage(); // Send the first message if queued
     });
 
-    // Handle messages from Twilio (media stream) and send them to OpenAI
+    // Add a flag to track if we're currently processing an interruption
+    let isProcessingInterruption = false;
+
+    // Function to safely interrupt the agent
+    function interruptAgentResponse() {
+      if (isProcessingInterruption) {
+        console.log("Already processing an interruption, skipping");
+        return;
+      }
+
+      console.log("Interrupting agent response");
+      isProcessingInterruption = true;
+      
+      openAiWs.send(JSON.stringify({ type: "response.cancel" }));
+      
+      // Reset the interruption flag after a short delay
+      setTimeout(() => {
+        isProcessingInterruption = false;
+      }, 1000);
+    }
+
+    // Update the connection message handler
     connection.on("message", (message) => {
       try {
         const data = JSON.parse(message);
 
-        if (data.event === "start") {
-          // When the call starts
-          streamSid = data.start.streamSid; // Get the stream ID
-          const callSid = data.start.callSid; // Get the call SID
-          const customParameters = data.start.customParameters; // Get custom parameters (firstMessage, callerNumber)
-
-          console.log("CallSid:", callSid);
-          console.log("StreamSid:", streamSid);
-          console.log("Custom Parameters:", customParameters);
-
-          // Capture callerNumber and firstMessage from custom parameters
-          const callerNumber = customParameters?.callerNumber || "Unknown";
-          session.callerNumber = callerNumber; // Store the caller number in the session
-          firstMessage =
-            customParameters?.firstMessage || "Hello, how can I assist you?"; // Set the first message
-          console.log("First Message:", firstMessage);
-          console.log("Caller Number:", callerNumber);
-
-          // Prepare the first message, but don't send it until the OpenAI connection is ready
-          queuedFirstMessage = {
-            type: "conversation.item.create",
-            item: {
-              type: "message",
-              role: "user",
-              content: [{ type: "input_text", text: firstMessage }],
-            },
-          };
-
-          if (openAiWsReady) {
-            sendFirstMessage(); // Send the first message if OpenAI is ready
-          }
-        } else if (data.event === "media" && data.media && data.media.payload) {
+        if (data.event === "media" && data.media && data.media.payload) {
           const currentTime = Date.now();
           
-          if (isLikelySpeech(data.media.payload)) {
+          const speechDetected = isLikelySpeech(data.media.payload);
+          
+          // Log the current state for debugging
+          console.log("Current state:", {
+            speechDetected,
+            userIsSpeaking,
+            agentIsSpeaking,
+            isProcessingInterruption,
+            speechStartTime: speechStartTime ? currentTime - speechStartTime : null,
+            lastUserSpeechTime: lastUserSpeechTime ? currentTime - lastUserSpeechTime : null
+          });
+          
+          if (speechDetected) {
             if (!userIsSpeaking) {
               userIsSpeaking = true;
               speechStartTime = currentTime;
@@ -471,17 +473,22 @@ fastify.register(async (fastify) => {
             
             lastUserSpeechTime = currentTime;
             
-            // Only interrupt if there's significant overlap and agent is speaking
+            // Only interrupt if ALL conditions are met
             if (agentIsSpeaking && 
                 speechStartTime && 
                 currentTime - speechStartTime > SPEECH_OVERLAP_THRESHOLD &&
-                consecutiveSpeechCount >= CONSECUTIVE_SAMPLES_NEEDED) {
-              console.log('Significant speech overlap detected, interrupting agent');
-              console.log("Overlap duration:", currentTime - speechStartTime);
+                consecutiveSpeechCount >= CONSECUTIVE_SAMPLES_NEEDED &&
+                !isProcessingInterruption &&
+                silenceGapCount <= MAX_SILENCE_GAPS) {
+              console.log('Significant speech overlap detected:', {
+                overlapDuration: currentTime - speechStartTime,
+                consecutiveSpeechCount,
+                silenceGapCount
+              });
               interruptAgentResponse();
             }
           } else {
-            // Check if user stopped speaking with more lenient timeout
+            // Check if user stopped speaking
             if (userIsSpeaking && 
                 currentTime - lastUserSpeechTime > USER_SPEECH_TIMEOUT &&
                 silenceGapCount > MAX_SILENCE_GAPS) {
@@ -493,16 +500,61 @@ fastify.register(async (fastify) => {
           }
         } else if (data.event === 'clear') {
           console.log('Clearing media stream');
-          speechBuffer = [];
-          consecutiveSpeechCount = 0;
-          silenceGapCount = 0;
-          lastSpeechLevel = 0;
-          userIsSpeaking = false;
-          agentIsSpeaking = false;
-          speechStartTime = null;
+          resetSpeechState();
         }
       } catch (error) {
-        console.error("Error parsing message:", error, "Message:", message);
+        console.error("Error parsing message:", error);
+      }
+    });
+
+    // Add a function to reset all speech-related state
+    function resetSpeechState() {
+      speechBuffer = [];
+      consecutiveSpeechCount = 0;
+      silenceGapCount = 0;
+      lastSpeechLevel = 0;
+      userIsSpeaking = false;
+      agentIsSpeaking = false;
+      speechStartTime = null;
+      lastUserSpeechTime = null;
+      isProcessingInterruption = false;
+      console.log('Speech state reset');
+    }
+
+    // Update the OpenAI message handler
+    openAiWs.on("message", async (data) => {
+      try {
+        const response = JSON.parse(data);
+
+        if (response.type === "response.audio.delta" && response.delta) {
+          if (!agentIsSpeaking) {
+            agentIsSpeaking = true;
+            console.log('Agent started speaking');
+          }
+          
+          // Only send audio if we're not processing an interruption
+          if (!isProcessingInterruption) {
+            connection.send(JSON.stringify({
+              event: "media",
+              streamSid: streamSid,
+              media: { payload: response.delta },
+            }));
+          }
+        }
+
+        if (response.type === "response.done") {
+          agentIsSpeaking = false;
+          isProcessingInterruption = false;
+          console.log('Agent finished speaking');
+          resetSpeechState();
+          // ... rest of response.done handling ...
+        }
+
+        // ... rest of the message handling code ...
+      } catch (error) {
+        console.error("Error processing OpenAI message:", error);
+        agentIsSpeaking = false;
+        isProcessingInterruption = false;
       }
     });
 
@@ -683,12 +735,6 @@ fastify.register(async (fastify) => {
           },
         })
       );
-    }
-
-    // Define the interruptAgentResponse function
-    function interruptAgentResponse() {
-      console.log("Interrupting agent response");
-      openAiWs.send(JSON.stringify({ type: "response.cancel" }));
     }
   });
 });
