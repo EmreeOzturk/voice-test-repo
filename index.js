@@ -186,6 +186,7 @@ function isLikelySpeech(audioPayload) {
   
   // Not enough samples yet
   if (speechBuffer.length < MIN_SPEECH_SAMPLES) {
+    console.log("isLikelySpeech: Not enough samples");
     return false;
   }
   
@@ -209,6 +210,18 @@ function isLikelySpeech(audioPayload) {
   const hasAcceptableSilenceGaps = silenceGapCount <= MAX_SILENCE_GAPS;
   const hasGoodSpeechRatio = ratio > SPEECH_DETECTION_RATIO;
   const isAboveNoiseFloor = currentLevel > NOISE_FLOOR;
+
+  // Enhanced logging
+  console.log("isLikelySpeech: ", {
+    currentLevel,
+    consecutiveSpeechCount,
+    silenceGapCount,
+    ratio,
+    hasConsecutiveSpeech,
+    hasAcceptableSilenceGaps,
+    hasGoodSpeechRatio,
+    isAboveNoiseFloor
+  });
   
   return hasConsecutiveSpeech && 
          hasAcceptableSilenceGaps && 
@@ -464,6 +477,7 @@ fastify.register(async (fastify) => {
                 currentTime - speechStartTime > SPEECH_OVERLAP_THRESHOLD &&
                 consecutiveSpeechCount >= CONSECUTIVE_SAMPLES_NEEDED) {
               console.log('Significant speech overlap detected, interrupting agent');
+              console.log("Overlap duration:", currentTime - speechStartTime);
               interruptAgentResponse();
             }
           } else {
