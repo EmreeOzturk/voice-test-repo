@@ -143,6 +143,10 @@ const SPEECH_WINDOW_SIZE = 10;       // Number of samples to consider for speech
 const SPEECH_DETECTION_RATIO = 0.7;  // Ratio of samples above threshold to consider as speech
 const USER_SPEECH_TIMEOUT = 500;     // Increased timeout to 500ms for more stable detection
 
+// Add a new constant for overlap detection
+const SPEECH_OVERLAP_THRESHOLD = 1000; // Minimum overlap time in ms before interrupting
+let speechStartTime = null; // Track when continuous speech started
+
 // Root route - just for checking if the server is running
 fastify.get("/", async (request, reply) => {
   reply.send({ message: "Twilio Media Stream Server is running!" }); // Send a simple message when accessing the root
@@ -436,23 +440,26 @@ fastify.register(async (fastify) => {
           const currentTime = Date.now();
           
           if (isLikelySpeech(data.media.payload)) {
-            lastUserSpeechTime = currentTime;
-            
             if (!userIsSpeaking) {
               userIsSpeaking = true;
+              speechStartTime = currentTime;
               console.log('User started speaking');
-              
-              // Only interrupt if the user has been speaking for a minimum duration
-              if (agentIsSpeaking && 
-                  speechBuffer.length >= SPEECH_WINDOW_SIZE && 
-                  currentTime - lastUserSpeechTime > USER_SPEECH_TIMEOUT) {
-                interruptAgentResponse();
-              }
+            }
+            
+            lastUserSpeechTime = currentTime;
+            
+            // Only interrupt if both the agent is speaking AND user has been speaking continuously
+            if (agentIsSpeaking && 
+                speechStartTime && 
+                currentTime - speechStartTime > SPEECH_OVERLAP_THRESHOLD) {
+              console.log('Speech overlap detected, interrupting agent');
+              interruptAgentResponse();
             }
           } else {
             // Check if user stopped speaking
             if (userIsSpeaking && currentTime - lastUserSpeechTime > USER_SPEECH_TIMEOUT) {
               userIsSpeaking = false;
+              speechStartTime = null;
               console.log('User stopped speaking');
             }
           }
@@ -467,21 +474,33 @@ fastify.register(async (fastify) => {
       try {
         const response = JSON.parse(data);
 
-        // Handle audio responses from OpenAI
+        // Set agent speaking state when audio starts
         if (response.type === "response.audio.delta" && response.delta) {
-          agentIsSpeaking = true;
-          
-          // Don't send audio if user is speaking
-          if (userIsSpeaking) {
-            interruptAgentResponse();
-            return;
+          if (!agentIsSpeaking) {
+            agentIsSpeaking = true;
+            console.log('Agent started speaking');
           }
           
-          connection.send(JSON.stringify({
-            event: "media",
-            streamSid: streamSid,
-            media: { payload: response.delta },
-          }));
+          // Only send audio if there's no sustained user speech
+          if (!userIsSpeaking || !speechStartTime || 
+              Date.now() - speechStartTime <= SPEECH_OVERLAP_THRESHOLD) {
+            connection.send(JSON.stringify({
+              event: "media",
+              streamSid: streamSid,
+              media: { payload: response.delta },
+            }));
+          }
+        }
+
+        // Clear agent speaking state when response is done
+        if (response.type === "response.done") {
+          agentIsSpeaking = false;
+          console.log('Agent finished speaking');
+          const agentMessage = response.response.output[0]?.content?.find(
+            (content) => content.transcript
+          )?.transcript || "Agent message not found";
+          session.transcript += `Agent: ${agentMessage}\n`;
+          console.log(`Agent (${sessionId}): ${agentMessage}`);
         }
 
         // Handle function calls (for Q&A and booking)
@@ -566,16 +585,6 @@ fastify.register(async (fastify) => {
               sendErrorResponse();
             }
           }
-        }
-
-        // Handle response completion and update transcript
-        if (response.type === "response.done") {
-          agentIsSpeaking = false;
-          const agentMessage = response.response.output[0]?.content?.find(
-            (content) => content.transcript
-          )?.transcript || "Agent message not found";
-          session.transcript += `Agent: ${agentMessage}\n`;
-          console.log(`Agent (${sessionId}): ${agentMessage}`);
         }
 
         // Handle user transcription
