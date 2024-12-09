@@ -153,6 +153,9 @@ let consecutiveSpeechCount = 0;
 let silenceGapCount = 0;
 let lastSpeechLevel = 0;
 
+// Add a minimum audio level threshold
+const MINIMUM_AUDIO_LEVEL = 0.0001; // Minimum level to even consider processing audio
+
 function calculateAudioLevel(audioPayload) {
   const buffer = Buffer.from(audioPayload, 'base64');
   const samples = new Int16Array(buffer.buffer);
@@ -176,6 +179,13 @@ function isLikelySpeech(audioPayload) {
   const currentLevel = calculateAudioLevel(audioPayload);
   const currentTime = Date.now();
   
+  // Immediately return false if audio level is below minimum threshold
+  // This handles cases where mic is off or there's only system noise
+  if (currentLevel < MINIMUM_AUDIO_LEVEL) {
+    console.log("Audio level below minimum threshold:", currentLevel);
+    return false;
+  }
+  
   // Add current level to rolling buffer
   speechBuffer.push({ level: currentLevel, time: currentTime });
   
@@ -186,9 +196,18 @@ function isLikelySpeech(audioPayload) {
   
   // Not enough samples yet
   if (speechBuffer.length < MIN_SPEECH_SAMPLES) {
-    console.log("isLikelySpeech: Not enough samples");
+    console.log("Not enough samples:", speechBuffer.length);
     return false;
   }
+  
+  // Enhanced logging for audio levels
+  console.log("Audio Analysis:", {
+    currentLevel,
+    bufferSize: speechBuffer.length,
+    averageLevel: speechBuffer.reduce((sum, sample) => sum + sample.level, 0) / speechBuffer.length,
+    minLevel: Math.min(...speechBuffer.map(sample => sample.level)),
+    maxLevel: Math.max(...speechBuffer.map(sample => sample.level))
+  });
   
   // Check for consecutive samples above threshold
   if (currentLevel > SPEECH_THRESHOLD) {
@@ -451,6 +470,20 @@ fastify.register(async (fastify) => {
 
         if (data.event === "media" && data.media && data.media.payload) {
           const currentTime = Date.now();
+          
+          // Get the audio level before full speech detection
+          const currentLevel = calculateAudioLevel(data.media.payload);
+          
+          // Skip processing if audio level is too low (mic off or muted)
+          if (currentLevel < MINIMUM_AUDIO_LEVEL) {
+            if (userIsSpeaking) {
+              console.log('Audio level too low, assuming user stopped speaking');
+              userIsSpeaking = false;
+              speechStartTime = null;
+              consecutiveSpeechCount = 0;
+            }
+            return;
+          }
           
           const speechDetected = isLikelySpeech(data.media.payload);
           
